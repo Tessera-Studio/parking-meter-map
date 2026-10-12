@@ -6,17 +6,28 @@ const LIST_MAX = 40;   // 一覧に出す件数
 const NEAR_M = 1000;   // 「停められる ◯区間」と数える範囲
 const SMALL_ZOOM = 14; // これより引いた地図では、線の代わりに点で出す（線が短すぎて見えないため）
 
+// 地図の下地は2つ。ふだんは色の少ない「シンプル」（国土地理院の淡色地図）、切り替えで「詳しい」（OpenStreetMap）
+// config.js に CARTO の鍵があれば、シンプルは CARTO（ダークテーマにも合わせる）にする
 const CARTO_KEY = (window.PAWMAP_CONFIG || {}).cartoApiKey || '';
-const BASE = CARTO_KEY ? {
-  light: `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`,
-  dark:  `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`,
-  attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-  subdomains: 'abcd', maxNativeZoom: 20,
-} : {
-  light: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  dark:  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  subdomains: 'abc', maxNativeZoom: 19,
+const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const BASES = {
+  simple: CARTO_KEY ? {
+    light: `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`,
+    dark:  `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`,
+    attr: `${OSM_ATTR} &copy; <a href="https://carto.com/attributions">CARTO</a>`,
+    subdomains: 'abcd', maxNativeZoom: 20,
+  } : {
+    light: 'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
+    dark:  'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
+    attr: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>',
+    subdomains: 'abc', maxNativeZoom: 18,
+  },
+  detail: {
+    light: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    dark:  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attr: OSM_ATTR,
+    subdomains: 'abc', maxNativeZoom: 19,
+  },
 };
 const SRC_ATTR = '区間データ：<a href="https://parking-meter.jp/" target="_blank" rel="noopener">警視庁</a>（<a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener">CC BY 4.0</a>）・<a href="https://www.police.pref.osaka.lg.jp/kotsu/tyusya/1/1/index.html" target="_blank" rel="noopener">大阪府警察</a>・神奈川県警察・北海道警察・京都府警察（線は OpenStreetMap から作成）';
 const PREFS = ['北海道', '東京都', '神奈川県', '京都府', '大阪府'];
@@ -102,12 +113,26 @@ const stHtml = s => `<span class="st ${s.a}">${esc(s.text)}${s.soon ? `<span cla
 const darkQ = window.matchMedia('(prefers-color-scheme: dark)');
 const narrow = () => window.innerWidth <= 760;
 
+let baseKind = 'simple';
+try { baseKind = localStorage.getItem('pmm-base') === 'detail' ? 'detail' : 'simple'; } catch (e) {}
+
 function setTiles() {
+  const base = BASES[baseKind];
   if (tiles) map.removeLayer(tiles);
-  tiles = L.tileLayer(darkQ.matches ? BASE.dark : BASE.light, {
-    attribution: BASE.attr, subdomains: BASE.subdomains,
-    maxNativeZoom: BASE.maxNativeZoom, maxZoom: 21, detectRetina: true,
+  tiles = L.tileLayer(darkQ.matches ? base.dark : base.light, {
+    attribution: base.attr, subdomains: base.subdomains,
+    maxNativeZoom: base.maxNativeZoom, maxZoom: 21, detectRetina: true,
   }).addTo(map);
+  // ダークテーマで明るい下地しかないときは、色を反転して暗くする（区間の線は別の層なのでそのまま）
+  document.body.classList.toggle('dim-tiles', darkQ.matches && !(baseKind === 'simple' && CARTO_KEY));
+  const b = $('#baseBtn');
+  b.setAttribute('aria-pressed', baseKind === 'detail');
+  b.querySelector('span').textContent = baseKind === 'detail' ? '地図：詳しい' : '地図：シンプル';
+}
+function toggleBase() {
+  baseKind = baseKind === 'detail' ? 'simple' : 'detail';
+  try { localStorage.setItem('pmm-base', baseKind); } catch (e) {}
+  setTiles();
 }
 
 // 一覧が地図の下（スマホ）または左（広い画面）を隠すので、見えている範囲の中央を出すためのずれ
@@ -486,6 +511,7 @@ function bind() {
   });
   $('#grip').addEventListener('click', () => setSheet($('#sheet').classList.contains('full') ? (state.sel ? 'mid' : '') : 'full'));
 
+  $('#baseBtn').addEventListener('click', toggleBase);
   $('#locate').addEventListener('click', () => {
     if (!navigator.geolocation) return alert('この端末では現在地を使えません');
     if (state.here) centerOn(state.here, Math.max(map.getZoom(), 16));

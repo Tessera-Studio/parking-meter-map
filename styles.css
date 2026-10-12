@@ -79,6 +79,10 @@ svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-lin
 
 .mapbtn{position:absolute;z-index:900;right:12px;top:calc(124px + env(safe-area-inset-top));width:48px;height:48px;border-radius:50%;border:0;background:var(--surface);box-shadow:var(--lift);cursor:pointer;display:grid;place-items:center}
 .mapbtn svg{width:22px;height:22px}
+/* 地図の下地の切り替え（シンプル ⇄ 詳しい地図）。いまの下地の名前を出す */
+.basebtn{position:absolute;z-index:900;right:12px;top:calc(184px + env(safe-area-inset-top));display:flex;align-items:center;gap:6px;height:40px;padding:0 12px;border:0;border-radius:50px;background:var(--surface);box-shadow:var(--lift);font-size:13px;cursor:pointer;white-space:nowrap}
+.basebtn svg{width:18px;height:18px}
+body.dim-tiles .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9)}
 
 /* ---------- 一覧と詳細（スマホは下、広い画面は左） ---------- */
 .sheet{position:absolute;z-index:1100;left:0;right:0;bottom:0;height:44%;background:var(--surface);border-top:1px solid var(--edge);display:flex;flex-direction:column;transition:height .2s ease}
@@ -169,4 +173,5 @@ svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-lin
   .sheetbody{padding-top:16px}
   .topbar{left:calc(var(--sheet-w) + 12px)}
   .mapbtn{top:auto;bottom:100px}
+  .basebtn{top:auto;bottom:160px}
 }
