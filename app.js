@@ -46,7 +46,8 @@ const FILTERS = ['pref', 'ward', 'town', 'days', 'at', 'limit', 'vehicle'];
 let zones = [];
 let holidays = { years: [], dates: {} }; // data/holidays.json
 let shown = [];
-let map, tiles, layer, hereMark, placeMark;
+let map, tiles, layer, labels, hereMark, placeMark;
+let hits = []; // 地名検索の候補
 const drawn = new Map(); // id → polyline 群
 const addrCache = new Map();
 
@@ -67,9 +68,10 @@ function initMap() {
   setTiles();
   darkQ.addEventListener?.('change', () => { setTiles(); draw(); });
   layer = L.layerGroup().addTo(map);
+  labels = L.layerGroup().addTo(map);
   // 現在地・検索した場所の印は、区間の線を描き直しても隠れないよう別の層に置く
   map.createPane('marks').style.zIndex = 450;
-  map.on('moveend', () => { if (!state.here && listOpen()) renderList(); if (drive()) renderDrive(); });
+  map.on('moveend', () => { if (!state.here && listOpen()) renderList(); if (drive()) renderDrive(); updateLabels(); });
   // 指で地図を動かしたら、現在地を追うのをやめる（現在地ボタンで戻す）
   map.on('dragstart', () => { state.follow = false; $('#locate').classList.add('off'); });
   map.on('zoomend', highlight);
@@ -115,6 +117,20 @@ function highlight() {
     p.setStyle({ weight: w, opacity: on ? 1 : .85, dashArray: drive() ? null : dash(p.zone, w) });
     if (on) p.bringToFront();
   }));
+  updateLabels();
+}
+
+// 拡大したときだけ、線に「300円／60分」の値札を付ける（多すぎると読めないので画面内の60件まで）
+function updateLabels() {
+  labels.clearLayers();
+  if (drive() || map.getZoom() < 17) return;
+  const b = map.getBounds().pad(0.1);
+  shown.filter(z => z.feeYen != null && b.contains(z.center)).slice(0, 60).forEach(z => {
+    const html = `<span>${esc([fmtFee(z), fmtLimit(z)].filter(Boolean).join('／'))}</span>`;
+    const m = L.marker(z.center, { icon: L.divIcon({ className: `ztag${z.id === state.sel ? ' on' : ''}`, html, iconSize: null }), keyboard: false });
+    m.on('click', () => openDetail(z, false));
+    labels.addLayer(m);
+  });
 }
 
 /* ---------- 表示の言い回し ---------- */
@@ -128,6 +144,31 @@ const title = z => z.addr || terms(z);
 const shortRule = r => (/^1月1日/.test(r) ? '' : /^12月1日/.test(r) ? '冬期休止' : r.replace(/曜/g, '').replace(/、/g, '・').replace(/を除く$/, 'は除く'));
 const vehicles = z => (z.truckOnly ? '貨物車専用（積載量5トン未満）'
   : [z.car && '普通車', z.truck && '貨物用あり', z.bike && '二輪車'].filter(Boolean).join('・'));
+const hm = t => `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+const dayLabel = z => ({ daily: '土日・祝日も使える', weekday: '土・日・祝日は除く', unknown: '時間・曜日は現地で確認' }[z.days] || '日曜・祝日は除く');
+
+// いま使えるか。終わりまで1時間を切ったら「あと◯分で時間外」をオレンジの枠で添える
+function status(z, now = new Date()) {
+  if (z.days === 'unknown') return '<span class="unk">時間は現地で確認</span>';
+  if (!Zones.openNow(z, now, holidays.dates)) return `<span class="no">○ 時間外</span>${z.hours ? `<span class="no">利用 ${esc(z.hours)}</span>` : ''}`;
+  const left = z.span[1] - (now.getHours() * 60 + now.getMinutes());
+  return `<span class="ok">● いま使える</span><span>${hm(z.span[1])}まで</span>${left <= 60 ? `<span class="soon">あと${left}分で時間外</span>` : ''}`;
+}
+
+/* 条件のチップ：画面に出さない select を正にして、その選択肢からチップを作る */
+function syncChips() {
+  document.querySelectorAll('.chips[data-for]').forEach(box => {
+    const sel = $('#' + box.dataset.for);
+    box.innerHTML = [...sel.options].map(o =>
+      `<button type="button" data-v="${esc(o.value)}" aria-pressed="${o.value === sel.value}">${esc(o.textContent)}</button>`).join('');
+  });
+  document.querySelectorAll('.qchip').forEach(b => b.setAttribute('aria-pressed', state[b.dataset.q] === b.dataset.v));
+}
+function choose(key, v) {
+  const sel = $('#' + key);
+  sel.value = v;
+  sel.dispatchEvent(new Event('change'));
+}
 
 /* ---------- 絞り込みと一覧 ---------- */
 function applyFilters() {
@@ -159,6 +200,7 @@ function applyFilters() {
   const active = FILTERS.filter(k => state[k]).length;
   $('#fcount').textContent = active;
   $('#fcount').hidden = !active;
+  syncChips();
   draw();
   if (listOpen()) renderList();
 }
@@ -171,30 +213,35 @@ function meters(a, b) {
 }
 const fmtDist = m => (m < 1000 ? `${Math.round(m / 10) * 10}m` : `${(m / 1000).toFixed(1)}km`);
 
-function listItem(z, d) {
+// 一覧の1行：左に距離を大きく、右に場所・種別と料金・いま使えるか
+function listItem(z, d, now) {
   const rule = z.rules.map(shortRule).filter(Boolean)[0];
   const tags = [z.truckOnly ? '貨物車専用' : z.truck && '貨物枠', z.bike && '二輪', z.permitOnly && '標章車専用'].filter(Boolean);
   const head = z.addr ? `${z.ward === state.ward ? '' : z.ward}${z.addr.slice(z.ward.length)}` : terms(z);
-  const meta = [z.addr && terms(z), z.hours, rule].filter(Boolean);
+  const meta = [z.kind === 'ticket' ? 'チケット' : 'メーター', z.addr && terms(z), rule].filter(Boolean);
+  const [, num, unit] = fmtDist(d).match(/^([\d.]+)(.*)$/);
+  const off = z.days !== 'unknown' && !Zones.openNow(z, now, holidays.dates);
   return `
-    <li data-id="${esc(z.id)}" class="${z.id === state.sel ? 'on' : ''}">
-      <span class="k ${dayClass(z)} ${z.kind}"></span>
+    <li data-id="${esc(z.id)}" class="${z.id === state.sel ? 'on' : ''} ${off ? 'off' : ''}">
+      <span class="dist">${num}<small>${unit}</small></span>
       <div class="body">
         <div class="nm">${esc(head)}${tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>
-        <div class="meta">${meta.map(m => `<span>${esc(m)}</span>`).join('')}</div>
+        <div class="meta"><span class="k ${dayClass(z)} ${z.kind}"></span>${meta.map(m => `<span>${esc(m)}</span>`).join('')}</div>
+        <div class="st">${status(z, now)}</div>
       </div>
-      <span class="dist">${fmtDist(d)}</span>
     </li>`;
 }
 
 function renderList() {
   const origin = state.here || [map.getCenter().lat, map.getCenter().lng];
   const byArea = state.sort === 'area';
-  $('#sortnote').textContent = byArea ? '' : state.here ? '現在地から' : '地図の中心から';
+  const now = new Date();
+  document.querySelectorAll('.tabs [data-sort]').forEach(b => b.setAttribute('aria-selected', b.dataset.sort === state.sort));
+  $('#sortnote').textContent = byArea ? '' : state.here ? '現在地から近い順' : '地図の中心から近い順';
   let rows = shown.map(z => ({ z, d: meters(origin, z.center) }));
   if (!byArea) {
     rows = rows.sort((a, b) => a.d - b.d).slice(0, LIST_MAX);
-    $('#list').innerHTML = rows.map(({ z, d }) => listItem(z, d)).join('') || '<li class="none">条件に合う区間はありません</li>';
+    $('#list').innerHTML = rows.map(({ z, d }) => listItem(z, d, now)).join('') || '<li class="none">条件に合う区間はありません</li>';
     return;
   }
   // エリアごと：区市町村（区を選んでいれば町名）を区間の多い順に並べ、その中は近い順
@@ -206,7 +253,7 @@ function renderList() {
   rows.forEach(r => { const k = key(r.z); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
   $('#list').innerHTML = [...groups].map(([k, rs]) => `
     <li class="group" data-group="${esc(k)}"><span>${esc(state.ward ? `${state.ward} ${k}` : k)}</span><b>${rs.length}</b></li>
-    ${rs.map(({ z, d }) => listItem(z, d)).join('')}`).join('') || '<li class="none">条件に合う区間はありません</li>';
+    ${rs.map(({ z, d }) => listItem(z, d, now)).join('')}`).join('') || '<li class="none">条件に合う区間はありません</li>';
 }
 
 /* ---------- 運転モードのカード ---------- */
@@ -272,15 +319,16 @@ function pickDrive(z) {
   renderDrive();
 }
 
-/* 運転モード ⇄ 詳しく探す */
+/* 地図で探す（最初の画面） ⇄ 運転モード（メニューから） */
 function setMode(isDrive) {
   document.body.classList.toggle('drive', isDrive);
-  $('#menuModeText').textContent = isDrive ? '詳しく探す' : '運転モードに戻る';
+  $('#menuModeText').textContent = isDrive ? '地図で探す' : '運転モード';
   toggleMenu(false);
   closeSearch();
+  showPanel('');
   if (isDrive) { closeDetail(); closeList(); toggleFilters(false); map.removeControl(map.zoomCtl); }
   else map.zoomCtl.addTo(map);
-  try { localStorage.setItem('pmm-mode', isDrive ? 'drive' : 'detail'); } catch (e) {}
+  try { localStorage.setItem('pmm-view', isDrive ? 'drive' : 'map'); } catch (e) {}
   setTimeout(() => map.invalidateSize(), 50);
   applyFilters();
 }
@@ -328,34 +376,40 @@ function openDetail(z, fly = true) {
   document.querySelectorAll('#list li').forEach(li => li.classList.toggle('on', li.dataset.id === z.id));
   if (narrow()) closeList();
   toggleFilters(false);
-  const row = (k, v, id) => (v ? `<dt>${k}</dt><dd${id ? ` id="${id}"` : ''}>${esc(v)}</dd>` : '');
+  showPanel('');
+  const row = (k, v) => (v ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : '');
   const [lat, lng] = z.center;
   const today = new Date();
-  const open = Zones.openNow(z, today, holidays.dates);
   const holiday = holidays.dates[Zones.ymd(today)];
+  const car = z.truckOnly ? '貨物車専用' : [z.car && '普通車', z.truck && '貨物', z.bike && '二輪'].filter(Boolean).join('・');
+  const place = z.addr ? z.addr.slice(z.ward.length) || z.addr : '住所を調べています…';
   $('#detail').innerHTML = `
     <button class="close" aria-label="閉じる">×</button>
-    <div class="badges"><span class="badge ${dayClass(z)}">${z.days === 'daily' ? '土日・祝日も使える' : z.days === 'weekday' ? '土・日・祝日は除く' : z.days === 'unknown' ? '時間・曜日は現地で確認' : '日曜・祝日は除く'}</span><span class="badge kind">${KIND[z.kind]}</span></div>
-    <h2>${esc(terms(z))}</h2>
+    <p class="dkick">${esc([prefName(z.pref), z.ward, KIND[z.kind]].filter(Boolean).join('・'))}</p>
+    <h2 id="dtitle">${esc(place)}</h2>
+    <div class="st">${status(z, today)}</div>
+    <span class="dayk"><span class="k ${dayClass(z)} ${z.kind}"></span>${dayLabel(z)}</span>
+    <div class="facts">
+      <div><span>制限時間</span><b>${esc(fmtLimit(z) || '—')}</b></div>
+      <div><span>手数料</span><b>${esc(fmtFee(z) || '—')}</b></div>
+      <div><span>車種</span><b>${esc(car || '—')}</b></div>
+    </div>
+    ${week(z, today)}
     <dl>
-      ${row('場所', z.addr || '住所を調べています…', 'addr')}
       ${row('路線', z.route)}
       ${row('区間', z.section)}
       ${row('枠数', z.spaces != null ? `${z.spaces}台` + (z.truckSpaces ? `（うち貨物車 ${z.truckSpaces}台）` : '') : '')}
-      ${row('制限時間', fmtLimit(z))}
-      ${row('料金', fmtFee(z) && `${fmtFee(z)}（${fmtLimit(z) || '1回'}）`)}
-      ${row('利用時間', z.hours || (z.days === 'unknown' ? '県警の公開情報になし（現地の標識で確認）' : ''))}
+      ${z.days === 'unknown' ? row('利用時間', '県警の公開情報になし（現地の標識で確認）') : ''}
       ${row('除く日', z.rules.join('、'))}
-      ${z.days === 'unknown' ? '' : row('いま', (open ? '利用時間内' : '利用時間外') + (holiday ? `（今日は${holiday}）` : holidayKnown() ? '' : '（祝日は判定していません）'))}
+      ${z.days === 'unknown' ? '' : row('祝日', holiday ? `今日は${holiday}` : holidayKnown() ? '' : '祝日は判定していません')}
       ${row('車種', vehicles(z))}
       ${z.permitOnly ? row('注意', '標章車（障害者等用）専用の枠があります') : ''}
       ${z.pref === '東京都' ? row('区間番号', z.id) : ''}
       ${row('出典', z.source)}
     </dl>
     <div class="acts">
-      <a class="btn primary" href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving" target="_blank" rel="noopener">Googleマップで経路</a>
-      <a class="btn primary" href="https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d" target="_blank" rel="noopener">Appleマップで経路</a>
-      <a class="maplink" href="https://www.google.com/maps/search/?api=1&query=${lat},${lng}" target="_blank" rel="noopener">Googleマップで場所だけ開く</a>
+      <a class="btn primary" href="https://www.google.com/maps/search/?api=1&query=${lat},${lng}" target="_blank" rel="noopener">Googleマップで開く</a>
+      <p class="route">経路：<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving" target="_blank" rel="noopener">Google</a><a href="https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d" target="_blank" rel="noopener">Apple</a></p>
     </div>
     <p class="warn">現地の標識・メーターの表示が優先されます。利用時間外は駐車できないことがあります。工事や行事で使えない場合もあります。</p>`;
   $('#detail').classList.add('open');
@@ -368,9 +422,28 @@ function openDetail(z, fly = true) {
       ? { maxZoom: 18, paddingTopLeft: [40, 150], paddingBottomRight: [40, sheet + 30], duration: .6 }
       : { maxZoom: 18, paddingTopLeft: [listOpen() ? 440 : 60, 60], paddingBottomRight: [420, 60], duration: .6 });
   }
-  address(z)
-    .then(a => { if (state.sel === z.id && $('#addr')) $('#addr').textContent = a || '（住所を特定できませんでした）'; })
-    .catch(() => { if (state.sel === z.id && $('#addr')) $('#addr').textContent = '（住所を取得できませんでした）'; });
+  if (!z.addr) {
+    address(z)
+      .then(a => { if (state.sel === z.id) $('#dtitle').textContent = a || terms(z); })
+      .catch(() => { if (state.sel === z.id) $('#dtitle').textContent = terms(z); });
+  }
+}
+
+// 曜日ごとの利用時間。きょうの行に色を付ける
+function week(z, today) {
+  if (z.days === 'unknown' || !z.hours) return '';
+  const r = z.rules.join(' ');
+  const dow = today.getDay();
+  const hol = !!holidays.dates[Zones.ymd(today)];
+  const rows = [
+    ['月〜金', z.hours, !hol && dow >= 1 && dow <= 5],
+    ['土', /土/.test(r) ? '' : z.hours, !hol && dow === 6],
+    ['日・祝', /日曜|休日/.test(r) ? '' : z.hours, hol || dow === 0],
+  ];
+  if (z.months) rows.push([`${z.months[1] % 12 + 1}月〜${(z.months[0] + 10) % 12 + 1}月`, '', false]);
+  if (/1月1日/.test(r)) rows.push(['1月1日〜3日', '', false]);
+  return `<div class="week"><h3>利用時間</h3>${rows.map(([k, v, t]) =>
+    `<div class="${t ? 'today' : ''}"><span>${k}${t ? '（きょう）' : ''}</span><span class="${v ? '' : 'x'}">${v ? esc(v) : '使えない'}</span></div>`).join('')}</div>`;
 }
 
 function closeDetail() {
@@ -380,7 +453,34 @@ function closeDetail() {
   document.querySelectorAll('#list li.on').forEach(li => li.classList.remove('on'));
 }
 
-/* ---------- 地名で移動 ---------- */
+/* ---------- 地名で探す ---------- */
+const PIN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
+const CLOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>';
+const AREA_RE = /^(東京都|大阪府|京都府|北海道|神奈川県)/;
+
+function recent() {
+  try { return JSON.parse(localStorage.getItem('pmm-recent')) || []; } catch (e) { return []; }
+}
+function remember(h) {
+  const list = [h, ...recent().filter(x => x.title !== h.title)].slice(0, 5);
+  try { localStorage.setItem('pmm-recent', JSON.stringify(list)); } catch (e) {}
+}
+// その場所から600m以内にある区間の数（候補の横に出す）
+const nearCount = p => zones.filter(z => meters(p, z.center) < 600).length;
+
+function showPanel(html) {
+  $('#qpanel').innerHTML = html;
+  $('#qpanel').hidden = !html;
+}
+// 何も入れていないとき：エリアへの移動と、最近探した場所
+function idlePanel() {
+  const n = count(zones, 'pref');
+  const areas = PREFS.filter(p => n[p]).map(p => `<button type="button" data-pref="${p}">${prefName(p)}</button>`).join('');
+  const rec = recent().map((h, i) =>
+    `<button type="button" class="qrow recent" data-recent="${i}">${CLOCK}<span class="qt"><b>${esc(h.title)}</b></span></button>`).join('');
+  showPanel(`<h3>エリアへ移動</h3><div class="chips">${areas}</div>${rec ? `<h3>最近</h3>${rec}` : ''}`);
+}
+
 async function goPlace(q) {
   q = q.trim();
   if (!q) return;
@@ -389,25 +489,38 @@ async function goPlace(q) {
   note.hidden = false;
   try {
     const res = await fetch(GSI_SEARCH + encodeURIComponent(q));
-    const hits = await res.json();
-    // 都内を優先（同名の地名が全国にあるため）
-    const hit = hits.find(h => /東京都|大阪府/.test(h.properties.title)) || hits[0];
-    if (!hit) { note.textContent = `「${q}」は見つかりませんでした`; return; }
-    const [lng, lat] = hit.geometry.coordinates;
-    state.place = [lat, lng];
-    state.follow = false;
-    $('#locate').classList.add('off');
-    closeSearch();
-    if (placeMark) map.removeLayer(placeMark);
-    placeMark = L.circleMarker([lat, lng], { pane: 'marks', radius: 7, color: '#fff', weight: 3, fillColor: '#D1452E', fillOpacity: 1 })
-      .bindTooltip(esc(hit.properties.title)).addTo(map);
-    if (drive()) renderDrive();
-    centerOn([lat, lng], 16, false);
-    if (listOpen()) renderList();
-    note.textContent = `${hit.properties.title} の近く`;
+    // 区間のある都道府県の地名を先に（同名の地名が全国にあるため）
+    const all = (await res.json()).slice(0, 30)
+      .map(h => ({ title: h.properties.title, lat: h.geometry.coordinates[1], lng: h.geometry.coordinates[0] }));
+    hits = [...all.filter(h => AREA_RE.test(h.title)), ...all.filter(h => !AREA_RE.test(h.title))].slice(0, 6);
+    if (!hits.length) { note.textContent = `「${q}」は見つかりませんでした`; showPanel(''); return; }
+    if (hits.length === 1) { goTo(hits[0]); return; }
+    note.hidden = true;
+    showPanel(hits.map((h, i) => {
+      const [, pref, rest] = h.title.match(/^(北海道|東京都|(?:大阪|京都)府|.{2,3}県)?(.*)$/);
+      return `<button type="button" class="qrow" data-hit="${i}">${PIN}<span class="qt"><b>${esc(rest || h.title)}</b>${pref ? `<span>${esc(pref)}</span>` : ''}</span><span class="qn">${nearCount([h.lat, h.lng])}区間</span></button>`;
+    }).join(''));
   } catch (e) {
     note.textContent = '地名検索につながりませんでした';
   }
+}
+
+function goTo(h) {
+  const { lat, lng } = h;
+  remember(h);
+  showPanel('');
+  state.place = [lat, lng];
+  state.follow = false;
+  $('#locate').classList.add('off');
+  closeSearch();
+  if (placeMark) map.removeLayer(placeMark);
+  placeMark = L.circleMarker([lat, lng], { pane: 'marks', radius: 7, color: '#fff', weight: 3, fillColor: '#D1452E', fillOpacity: 1 })
+    .bindTooltip(esc(h.title)).addTo(map);
+  if (drive()) renderDrive();
+  centerOn([lat, lng], 16, false);
+  if (listOpen()) renderList();
+  $('#qnote').textContent = `${h.title} の近く`;
+  $('#qnote').hidden = false;
 }
 
 /* ---------- 祝日 ---------- */
@@ -512,9 +625,30 @@ function resetFilters() {
 
 function bind() {
   $('#qform').addEventListener('submit', e => { e.preventDefault(); $('#q').blur(); goPlace($('#q').value); });
+  $('#q').addEventListener('focus', () => { if (!$('#q').value.trim()) idlePanel(); });
+  $('#q').addEventListener('input', () => { if (!$('#q').value.trim()) idlePanel(); else showPanel(''); });
+  $('#qpanel').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.hit) goTo(hits[+b.dataset.hit]);
+    else if (b.dataset.recent) goTo(recent()[+b.dataset.recent]);
+    else if (b.dataset.pref) { showPanel(''); closeSearch(); state.here = null; fitAll(b.dataset.pref); }
+  });
   $('#menuBtn').addEventListener('click', e => { e.stopPropagation(); toggleMenu(); });
-  document.addEventListener('click', e => { if (!$('#menu').hidden && !e.target.closest('#menu')) toggleMenu(false); });
+  document.addEventListener('click', e => {
+    if (!$('#menu').hidden && !e.target.closest('#menu')) toggleMenu(false);
+    if (!$('#qpanel').hidden && !e.target.closest('.topbar')) showPanel('');
+  });
+  // 条件のチップ（画面に出さない select を切り替える）と、検索の下のよく使う2つ
+  document.querySelectorAll('.chips[data-for]').forEach(box => box.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (b) choose(box.dataset.for, b.dataset.v);
+  }));
+  document.querySelectorAll('.qchip').forEach(b => b.addEventListener('click', () => {
+    choose(b.dataset.q, state[b.dataset.q] === b.dataset.v ? '' : b.dataset.v);
+  }));
   $('#menuList').addEventListener('click', () => { if (drive()) setMode(false); openList(); });
+  $('#openList').addEventListener('click', () => (listOpen() ? closeList() : openList()));
   $('#menuMode').addEventListener('click', () => setMode(!drive()));
   $('#searchBtn').addEventListener('click', () => (document.body.classList.contains('searching') ? closeSearch() : openSearch()));
   $('#qclose').addEventListener('click', closeSearch);
@@ -546,7 +680,7 @@ function bind() {
     fitAll();
   });
   $('#town').addEventListener('change', e => { state.town = e.target.value; applyFilters(); fitAll(); });
-  $('#sort').addEventListener('change', e => { state.sort = e.target.value; renderList(); });
+  document.querySelectorAll('.tabs [data-sort]').forEach(b => b.addEventListener('click', () => { state.sort = b.dataset.sort; renderList(); }));
   $('#limit').addEventListener('change', e => { state.limit = e.target.value; applyFilters(); });
   $('#vehicle').addEventListener('change', e => { state.vehicle = e.target.value; applyFilters(); });
   $('#days').addEventListener('change', e => { state.days = e.target.value; applyFilters(); });
@@ -569,7 +703,8 @@ function bind() {
   });
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
-    if (document.body.classList.contains('searching')) closeSearch();
+    if (!$('#qpanel').hidden) showPanel('');
+    else if (document.body.classList.contains('searching')) closeSearch();
     else if (!$('#menu').hidden) toggleMenu(false);
     else if (!$('#filters').hidden) toggleFilters(false);
     else if ($('#detail').classList.contains('open')) closeDetail();
@@ -595,11 +730,11 @@ async function boot() {
   holidayNote();
   fillPrefs();
   fillHours();
-  // 前回「詳しく探す」で閉じた人はそのまま。初めての人は運転モードから
-  let mode = 'drive';
-  try { mode = localStorage.getItem('pmm-mode') || 'drive'; } catch (e) {}
-  if (mode !== 'drive') setMode(false);
-  else { map.removeControl(map.zoomCtl); applyFilters(); }
+  // 最初は「地図で探す」。前回運転モードで閉じた人だけ運転モードから
+  let mode = 'map';
+  try { mode = localStorage.getItem('pmm-view') || 'map'; } catch (e) {}
+  if (mode === 'drive') setMode(true);
+  else applyFilters();
   // 現在地が取れればそこへ。取れないうちは東京を見せる
   startWatch();
   // 動きをつけると、あとから届いた現在地への移動をズームの終わりで上書きしてしまうので、一度に切り替える
