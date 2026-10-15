@@ -381,12 +381,18 @@ function select(id, { pan = false, scroll = false } = {}) {
   if (scroll) scrollToCard(id, true);
   if (pan) panToZone(byId.get(id));
 }
-function panToZone(z) {
+// center：見えている範囲のまん中へ動かす（地図で押したとき）。
+// そうでなければ、端に近いときだけ少し動かす（カードをめくったとき）
+function panToZone(z, center = false) {
   if (!z) return;
   const r = region();
   const p = map.latLngToContainerPoint(z.center);
-  const mx = (r.r - r.l) * .2, my = (r.b - r.t) * .2;
-  if (p.x > r.l + mx && p.x < r.r - mx && p.y > r.t + my && p.y < r.b - my) return;
+  if (center) {
+    if (Math.hypot(p.x - (r.l + r.r) / 2, p.y - (r.t + r.b) / 2) < 4) return;
+  } else {
+    const mx = (r.r - r.l) * .2, my = (r.b - r.t) * .2;
+    if (p.x > r.l + mx && p.x < r.r - mx && p.y > r.t + my && p.y < r.b - my) return;
+  }
   quiet = true;
   map.panTo(map.unproject(map.project(z.center).add(offset())), { animate: true, duration: .35 });
 }
@@ -396,6 +402,7 @@ function pickOnMap(z) {
   if (state.detail) { openDetail(z); return; }
   if (!state.rows.some(r => r.z.id === z.id)) renderCards(z);
   select(z.id, { scroll: true });
+  panToZone(z, true);
 }
 
 // カードの列を横にめくったら、いちばん左に来たカードを選ぶ
