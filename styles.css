@@ -13,12 +13,14 @@
   --muted:#6B6F75;
   --ok:#1E7F4A;
   --on-ok:#FFFFFF;
+  --no:#C8372D;
+  --no-wash:#FBE4E2;
+  --on-no:#FFFFFF;
   --off:#A3A8AE;
   --off-wash:#E6E7E9;
   --here:#2F6FDB;
   --pick:#F2B300;
   --pick-edge:#1C1D1F;
-  --warn:#B4600C;
   --on-ink:#FFFFFF;
   --r-card:18px; --r-ctl:14px; --r-btn:12px; --r-badge:8px;
   --shadow-card:0 4px 18px rgba(0,0,0,.14);
@@ -33,7 +35,7 @@
   :root:not([data-theme="light"]){
     --ground:#141516; --surface:#1E2022; --surface-2:#26292C; --chip-2:#2C2F33; --line:#2E3134;
     --ink:#F2F2F2; --ink-2:#D0D0D0; --muted:#A6A6A6;
-    --ok:#4FC983; --on-ok:#000000; --off:#6E747B; --off-wash:#33373B; --here:#5B92F0; --pick:#FFC93C; --pick-edge:transparent; --warn:#F0A04B; --on-ink:#141516;
+    --ok:#4FC983; --on-ok:#000000; --off:#6E747B; --off-wash:#33373B; --here:#5B92F0; --pick:#FFC93C; --pick-edge:transparent; --no:#FF6B5E; --no-wash:#3B2321; --on-no:#000000; --on-ink:#141516;
     --shadow-card:0 4px 18px rgba(0,0,0,.5); --shadow-ctl:0 2px 10px rgba(0,0,0,.45);
     color-scheme:dark;
   }
@@ -41,7 +43,7 @@
 :root[data-theme="dark"]{
   --ground:#141516; --surface:#1E2022; --surface-2:#26292C; --chip-2:#2C2F33; --line:#2E3134;
   --ink:#F2F2F2; --ink-2:#D0D0D0; --muted:#A6A6A6;
-  --ok:#4FC983; --on-ok:#000000; --off:#6E747B; --off-wash:#33373B; --here:#5B92F0; --pick:#FFC93C; --pick-edge:transparent; --warn:#F0A04B; --on-ink:#141516;
+  --ok:#4FC983; --on-ok:#000000; --off:#6E747B; --off-wash:#33373B; --here:#5B92F0; --pick:#FFC93C; --pick-edge:transparent; --no:#FF6B5E; --no-wash:#3B2321; --on-no:#000000; --on-ink:#141516;
   --shadow-card:0 4px 18px rgba(0,0,0,.5); --shadow-ctl:0 2px 10px rgba(0,0,0,.45);
   color-scheme:dark;
 }
@@ -101,13 +103,13 @@ body.dim-tiles .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness
 .qmsg{margin:0;padding:14px 16px;color:var(--muted);font-size:14px}
 
 /* ---------- 右下：地図の切り替え・現在地 ---------- */
-.mapctl{position:absolute;z-index:900;right:16px;bottom:calc(28px + var(--cards-h) + 14px + env(safe-area-inset-bottom));display:grid;gap:10px}
+.mapctl{position:absolute;z-index:900;right:16px;bottom:calc(16px + var(--cards-h) + 14px + env(safe-area-inset-bottom));display:grid;gap:10px}
 .round{width:48px;height:48px;border:0;border-radius:50%;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-ctl);display:grid;place-items:center;padding:0}
 .round svg{width:22px;height:22px}
 #baseBtn[aria-pressed="true"]{background:var(--ink);color:var(--on-ink)}
 
 /* ---------- カードの列 ---------- */
-.cards{position:absolute;z-index:950;left:0;right:0;bottom:calc(28px + env(safe-area-inset-bottom));pointer-events:none}
+.cards{position:absolute;z-index:950;left:0;right:0;bottom:calc(16px + env(safe-area-inset-bottom));pointer-events:none}
 .cards > *{pointer-events:auto}
 .desttag{justify-self:start;display:inline-block;margin:0 0 10px 16px;padding:6px 12px;background:var(--surface);border-radius:10px;box-shadow:var(--shadow-ctl);font-size:14px;color:var(--ink-2);max-width:calc(100% - 32px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .desttag b{color:var(--ink);font-weight:700}
@@ -115,34 +117,27 @@ body.dim-tiles .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness
 .track::-webkit-scrollbar{display:none}
 .track::after{content:"";flex:0 0 max(1px,calc(100vw - var(--card-w) - 36px))}
 
-.card{flex:0 0 min(var(--card-w),calc(100vw - 48px));scroll-snap-align:start;display:grid;gap:8px;padding:14px 16px 16px;background:var(--surface);border-radius:var(--r-card);box-shadow:var(--shadow-card);text-align:left;cursor:pointer}
-/* カードの頭：Pマーク・区間名・状態のバッジ。下に種類・距離・件数 */
-.chead{display:flex;align-items:center;gap:10px;min-width:0}
-.cp{flex:none;display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--off);color:#fff;font:700 15px/1 var(--f-body);font-style:normal}
+.card{flex:0 0 min(var(--card-w),calc(100vw - 48px));scroll-snap-align:start;display:grid;align-content:start;gap:6px;padding:14px;max-height:180px;overflow:hidden;background:var(--surface);border-radius:var(--r-card);box-shadow:var(--shadow-card);text-align:left;cursor:pointer}
+/* カード（4行）：Pと区間名とバッジ／種類・距離・最大・料金／利用時間と除外／ボタン */
+.chead{display:flex;align-items:center;gap:8px;min-width:0}
+.cp{flex:none;display:grid;place-items:center;width:26px;height:26px;border-radius:7px;background:var(--off);color:#fff;font:700 15px/1 var(--f-body);font-style:normal}
 .card.ok .cp{background:var(--ok);color:var(--on-ok)}
-.cname{flex:1;min-width:0;font-size:22px;font-weight:700;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card.no .cp{background:var(--no);color:var(--on-no)}
+.cname{flex:1;min-width:0;font-size:20px;font-weight:700;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chead .badge{flex:none}
-.csub{display:flex;justify-content:space-between;gap:10px;margin-top:-4px;padding-bottom:10px;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted);white-space:nowrap}
+.csub,.chours{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.csub{display:flex;justify-content:space-between;gap:10px}
 .csub span:first-child{overflow:hidden;text-overflow:ellipsis}
 .cnum{flex:none}
-/* 利用時間・最大・料金：アイコン・数字・見出しを縦に並べ、3つを横に */
-.cfacts{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:4px;padding:2px 0}
-.cfacts div{display:grid;justify-items:center;gap:2px;min-width:0;text-align:center}
-.cfacts svg{width:20px;height:20px;color:var(--ok)}
-.card.off .cfacts svg{color:var(--muted)}
-.cfacts b{max-width:100%;font-size:clamp(16px,4.8vw,19px);font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cfacts span{font-size:12px;color:var(--muted)}
-.card.off .cname,.card.off .cfacts b{color:var(--ink-2)}
-/* 注意書き（使えない曜日・期間） */
-.cwarn{margin:-2px 0 0;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--warn)}
-.cwarn svg{flex:none;width:17px;height:17px}
-.cbtns{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:4px}
-.cbtns .btn.big{height:52px;font-size:17px;border-radius:26px}
-.cbtns .btn.sub{height:52px;border-radius:26px}
+.card.no .cname,.card.unk .cname{color:var(--ink-2)}
+.cbtns{display:grid;grid-template-columns:1fr 72px;gap:8px;margin-top:2px}
+.cbtns .btn{height:44px;padding:0 10px}
+.btn.inkbtn{background:var(--ink);color:var(--surface)}
 .badge{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border-radius:var(--r-badge);font-size:13px;font-weight:700;white-space:nowrap}
 .badge svg{width:15px;height:15px;stroke-width:2.4}
 .badge.ok{background:var(--ok);color:var(--on-ok)}
 .badge.off{background:var(--off-wash);color:var(--ink-2)}
+.badge.no{background:var(--no-wash);color:var(--no)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 16px;border:0;border-radius:var(--r-btn);font-size:15px;font-weight:700;text-decoration:none;white-space:nowrap;color:var(--ink)}
 .btn svg{width:18px;height:18px}
 .btn.go{background:var(--ok);color:var(--on-ok)}
@@ -158,8 +153,10 @@ body.dim-tiles .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness
 /* Pマーク：寄った地図の小さいP（18px）と、選んだ区間の大きいP（32px・下に三角）。地の色は状態の色 */
 .pw{--pc:var(--off)}
 .pw.ok{--pc:var(--ok)}
+.pw.no{--pc:var(--no)}
 .p{display:grid;place-items:center;width:18px;height:18px;border-radius:5px;background:var(--pc);color:#fff;border:2px solid #fff;font:700 10px/1 var(--f-body);box-shadow:0 1px 3px rgba(0,0,0,.25);box-sizing:border-box}
 .pw.ok .p{color:var(--on-ok)}
+.pw.no .p{color:var(--on-no)}
 .pw.sel{transform:translate(-50%,calc(-100% - 4px))}
 .pw.sel .p{width:32px;height:32px;border-radius:9px;border-width:3px;font-size:16px;box-shadow:var(--shadow-ctl)}
 .pw.sel::after{content:"";width:0;height:0;margin-top:-1px;border:6px solid transparent;border-top-color:#fff;border-bottom:0;filter:drop-shadow(0 2px 1px rgba(0,0,0,.2))}
@@ -187,17 +184,19 @@ body.dim-tiles .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness
 .state span{font-size:14px;color:var(--ink-2)}
 .state.ok{background:var(--ok);color:var(--on-ok)}
 .state.ok span{color:var(--on-ok);opacity:.9}
-.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.facts div{background:var(--surface-2);border-radius:12px;padding:10px 12px;display:grid;gap:2px;min-width:0}
-.facts span{font-size:12px;color:var(--muted)}
-.facts b{font-size:16px;font-weight:700;line-height:1.3;overflow-wrap:anywhere}
+.state.no{background:var(--no-wash);color:var(--no)}
+.dfacts{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:4px;padding:12px 8px;background:var(--surface-2);border-radius:14px}
+.dfacts div{display:grid;justify-items:center;gap:3px;min-width:0;text-align:center}
+.dfacts svg{width:20px;height:20px;color:var(--muted)}
+.dfacts b{max-width:100%;font-size:20px;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dfacts span{font-size:12px;color:var(--muted)}
 .hours h3,.dmore h3{margin:0 0 4px;font-size:13px;font-weight:700;color:var(--muted)}
 .hours div{display:flex;justify-content:space-between;gap:12px;font-size:16px;padding:8px 0;border-bottom:1px solid var(--line)}
 .hours div:last-child{border-bottom:0}
 .hours div.on b{color:var(--ok)}
 .hours b{font-weight:700}
 .hours .x{color:var(--muted);font-weight:500}
-.hours div.closed{font-size:13px;color:var(--muted);padding:5px 0}
+.hours .hex{margin:6px 0 0;font-size:13px;color:var(--ink-2)}
 .note{margin:0;display:flex;gap:8px;font-size:13px;line-height:1.55;color:var(--ink-2)}
 .note svg{flex:none;width:18px;height:18px;margin-top:1px;color:var(--muted)}
 .dmore dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:13px}
@@ -234,13 +233,13 @@ body.dim-tiles .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness
 .ring svg{width:260px;height:260px;transform:rotate(-90deg)}
 .ring .bg{stroke:var(--line);stroke-width:16}
 .ring .fg{stroke:var(--ok);stroke-width:16;stroke-linecap:round;transition:stroke-dashoffset .6s linear}
-.ring.over .fg{stroke:var(--off)}
+.ring.over .fg{stroke:var(--no)}
 .rtext{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;text-align:center}
 .rtext small{font-size:15px;color:var(--muted)}
 .rtext b{font-size:64px;font-weight:700;line-height:1.05;letter-spacing:-.02em}
 .rtext b.long{font-size:44px}
 .rtext span{font-size:15px;color:var(--ink-2)}
-.ring.over .rtext b{color:var(--muted);font-size:44px}
+.ring.over .rtext b{color:var(--no);font-size:44px}
 .tfacts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .tfacts div{background:var(--surface-2);border-radius:12px;padding:10px 12px;display:grid;gap:2px}
 .tfacts span{font-size:12px;color:var(--muted)}

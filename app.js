@@ -61,7 +61,6 @@ const I = {
   map: svg('<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/>'),
   timer: svg('<circle cx="12" cy="13" r="8"/><path d="M12 13l3-3M9.5 2.5h5"/>'),
   yen: svg('<circle cx="12" cy="12" r="9"/><path d="M8.5 7.5L12 12l3.5-4.5M12 12v5M9 12.5h6M9 15h6"/>'),
-  warn: svg('<path d="M12 4L2.5 20h19z"/><path d="M12 10v4M12 17h.01"/>'),
   info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'),
   chev: svg('<path d="M9 6l6 6-6 6"/>'),
   down: svg('<path d="M6 9l6 6 6-6"/>'),
@@ -120,9 +119,10 @@ function status(z, t = when()) {
   const n = nextOpen(z, t);
   return { a, text: n ? `${dayWord(n)} ${hmOf(n)}から` : '冬期休止中', next: n };
 }
+// バッジの色：緑＝使える／赤＝時間外／グレー＝時間不明
 const badge = s => (s.a === 'ok'
   ? `<span class="badge ok">${I.clock}${esc(s.text)}</span>`
-  : `<span class="badge off">${esc(s.text)}</span>`);
+  : `<span class="badge ${s.a === 'no' ? 'no' : 'off'}">${esc(s.text)}</span>`);
 
 /* ---------- 地図 ---------- */
 const darkQ = window.matchMedia('(prefers-color-scheme: dark)');
@@ -217,10 +217,10 @@ function initMap() {
 const colors = () => {
   const cs = getComputedStyle(document.documentElement);
   const v = k => cs.getPropertyValue(k).trim();
-  return { ok: v('--ok'), off: v('--off'), pick: v('--pick'), edge: v('--pick-edge') };
+  return { ok: v('--ok'), no: v('--no'), off: v('--off'), pick: v('--pick'), edge: v('--pick-edge') };
 };
 
-// 区間の線とPマーク。重なり順はグレー → 緑 → 選んだ区間
+// 区間の線とPマーク。重なり順は時間不明 → 赤 → 緑 → 選んだ区間
 // 線はいつも出す。Pマークは選んだ区間と、DETAIL_ZOOM まで寄った地図だけ。地図の上に時刻の札は出さない
 function draw() {
   if (!zones.length) return;
@@ -237,13 +237,13 @@ function draw() {
     const sel = z.id === state.sel;
     if (!sel && !view.intersects(z.bounds)) return;
     const a = avail(z, t);
-    items.push({ z, a, sel, rank: sel ? 2 : a === 'ok' ? 1 : 0 });
+    items.push({ z, a, sel, rank: sel ? 3 : a === 'ok' ? 2 : a === 'no' ? 1 : 0 });
   });
   items.sort((p, q) => p.rank - q.rank);
 
   items.forEach(({ z, a, sel, rank }) => {
     const ok = a === 'ok';
-    const c = ok ? col.ok : col.off;
+    const c = ok ? col.ok : a === 'no' ? col.no : col.off;
     const parts = [];
     const line = (l, o) => parts.push(L.polyline(l, { opacity: 1, lineCap: 'round', lineJoin: 'round', ...o }));
     z.lines.forEach(l => {
@@ -256,13 +256,14 @@ function draw() {
         if (!small && !dark) line(l, { color: '#fff', weight: 10 });
         line(l, { color: c, weight: small ? 4 : 6 });
       } else {
+        // 赤（時間外）・グレーの破線（時間不明）は、緑より細く
         line(l, { color: c, weight: small ? 2 : 4, lineCap: 'butt', dashArray: a === 'unk' ? '4 6' : null });
       }
       // 細い線でも押しやすいよう、見えない太い当たり判定を重ねる
       parts.push(L.polyline(l, { color: c, weight: 18, opacity: 0 }));
     });
     if (sel || allP) {
-      const html = `<div class="pw${sel ? ' sel' : ''}${ok ? ' ok' : ''}" data-id="${esc(z.id)}"><div class="p">P</div></div>`;
+      const html = `<div class="pw${sel ? ' sel' : ''} ${a}" data-id="${esc(z.id)}"><div class="p">P</div></div>`;
       parts.push(L.marker(z.center, {
         icon: L.divIcon({ className: 'pm', html, iconSize: [0, 0] }),
         zIndexOffset: rank * 1000, keyboard: false, title: zoneName(z),
@@ -307,29 +308,25 @@ function computeRows(extra) {
   return list;
 }
 
-// カードの注意書き：使えない曜日・期間（制限事項をそのまま）。時間が公開されていない区間はその旨
-const cautions = z => (z.days === 'unknown' || !z.span ? ['時間・曜日は現地の標識で確認'] : z.rules.filter(Boolean));
+// カードの3行目：利用時間と除外を1行で。「日曜・休日を除く」「１月１日〜３日を除く」→「日曜・休日、1/1–3 を除く」
+function hoursLine(z) {
+  if (z.days === 'unknown' || !z.span) return '';
+  const md = t => t.replace(/(\d{1,2})月(\d{1,2})日/g, '$1/$2');
+  const ex = z.rules.map(r => md(r.replace(/(を除く|は休止)$/, '')).replace(/(\d+)日/g, '$1').replace(/[〜～]/g, '–').replace(/^(\d+)\/(\d+)–\1\/(\d+)$/, '$1/$2–$3')).filter(Boolean);
+  return ex.length ? `${z.hours} · ${ex.join('、')} を除く` : `毎日 ${z.hours}`;
+}
 
 function cardHtml(r, i, n) {
   const { z, d, s } = r;
-  const unk = z.days === 'unknown' || !z.span;
-  const fact = (icon, v, k) => `<div>${icon}<b>${esc(v)}</b><span>${k}</span></div>`;
+  const sub = [kindShort(z), distText(d), fmtLimit(z) && `最大${fmtLimit(z)}`, fmtFee(z)].filter(Boolean).join(' · ');
+  const hl = hoursLine(z);
   return `
-    <article class="card ${s.a === 'ok' ? 'ok' : 'off'}${z.id === state.sel ? ' sel' : ''}" data-id="${esc(z.id)}" tabindex="0" aria-label="${esc(`${zoneName(z)}、${s.text}`)}">
-      <div class="chead">
-        <i class="cp" aria-hidden="true">P</i>
-        <span class="cname">${esc(zoneName(z))}</span>
-        ${badge(s)}
-      </div>
-      <div class="csub"><span>${esc(KIND[z.kind])} · ${esc(distText(d))}</span><span class="cnum">${i + 1} / ${n}</span></div>
-      <div class="cfacts">
-        ${fact(I.clock, unk ? '現地で確認' : z.hours, '利用時間')}
-        ${fact(I.timer, fmtLimit(z) || '—', '最大')}
-        ${fact(I.yen, fmtFee(z) || '—', '料金')}
-      </div>
-      ${cautions(z).map(c => `<p class="cwarn">${I.warn}<span>${esc(c)}</span></p>`).join('')}
+    <article class="card ${s.a}${z.id === state.sel ? ' sel' : ''}" data-id="${esc(z.id)}" tabindex="0" aria-label="${esc(`${zoneName(z)}、${s.text}`)}">
+      <div class="chead"><i class="cp" aria-hidden="true">P</i><span class="cname">${esc(zoneName(z))}</span>${badge(s)}</div>
+      <div class="csub"><span>${esc(sub)}</span><span class="cnum">${i + 1}/${n}</span></div>
+      ${hl ? `<div class="chours">${esc(hl)}</div>` : ''}
       <div class="cbtns">
-        <button class="btn big ${s.a === 'ok' ? 'go' : 'dark'}" type="button" data-act="go">${I.go}ここへ行く</button>
+        <button class="btn inkbtn" type="button" data-act="go">${I.go}ここへ行く</button>
         <button class="btn sub" type="button" data-act="detail">詳細</button>
       </div>
     </article>`;
@@ -368,6 +365,7 @@ function scrollToCard(id, smooth) {
   if (!c) return;
   const tr = $('#track');
   const behavior = smooth ? 'smooth' : 'instant';
+  autoScroll = smooth ? id : null;
   if (narrow()) tr.scrollTo({ left: c.offsetLeft - 16, behavior });
   else if (c.offsetTop < tr.scrollTop || c.offsetTop + c.offsetHeight > tr.scrollTop + tr.clientHeight) tr.scrollTo({ top: c.offsetTop - 16, behavior });
 }
@@ -407,6 +405,7 @@ function pickOnMap(z) {
 
 // カードの列を横にめくったら、いちばん左に来たカードを選ぶ
 let scrollTimer;
+let autoScroll = null; // プログラムでカードの列を動かしている先の区間（途中のカードを選ばないため）
 function onTrackScroll() {
   if (!narrow()) return;
   clearTimeout(scrollTimer);
@@ -417,6 +416,11 @@ function onTrackScroll() {
       const d = Math.abs(c.offsetLeft - 16 - tr.scrollLeft);
       if (d < bd) { bd = d; best = c; }
     });
+    if (autoScroll) {
+      // 自動で動かしている途中なら、目的のカードに着くまで選び直さない
+      if (best && best.dataset.id === autoScroll) autoScroll = null;
+      return;
+    }
     if (best && best.dataset.id !== state.sel) select(best.dataset.id, { pan: true });
   }, 140);
 }
@@ -446,7 +450,8 @@ async function address(z) {
   return text;
 }
 
-// 利用できる時間。曜日ごとの時間が全部同じなら「毎日」の1行、違うときだけ曜日別。使えない期間は小さい灰色の行
+// 利用できる時間。曜日ごとの時間が全部同じなら「毎日」の1行、違うときだけ曜日別。
+// その下に除外（「日曜・休日を除く」「1月1日〜3日を除く」など）を1行ずつ
 function hours(z, t) {
   if (!z.span) return '';
   const r = z.rules.join(' ');
@@ -460,19 +465,18 @@ function hours(z, t) {
   if (wk === sat && sat === sun) rows = [['毎日', wk, true]];
   else if (wk === sat) rows = [['月〜土', wk, !isSun], ['日・祝', sun, isSun]];
   else rows = [['月〜金', wk, !isSun && !isSat], ['土', sat, isSat], ['日・祝', sun, isSun]];
-  const closed = [];
-  if (z.months) closed.push(`${z.months[1] % 12 + 1}月〜${(z.months[0] + 10) % 12 + 1}月`);
-  if (/1月1日/.test(r)) closed.push('1月1日〜3日');
+  const ex = z.rules.filter(Boolean);
+  if (z.months && !ex.some(x => /休止/.test(x))) ex.push(`${z.months[1] % 12 + 1}月〜${(z.months[0] + 10) % 12 + 1}月は利用不可`);
   return `<div class="hours"><h3>利用できる時間</h3>${rows.map(([k, v, on]) =>
-    `<div class="${on && v ? 'on' : ''}"><span>${k}</span>${v ? `<b>${esc(v)}</b>` : '<span class="x">利用不可</span>'}</div>`).join('')}${closed.map(k =>
-    `<div class="closed"><span>${k}</span><span>利用不可</span></div>`).join('')}</div>`;
+    `<div class="${on && v ? 'on' : ''}"><span>${k}</span>${v ? `<b>${esc(v)}</b>` : '<span class="x">利用不可</span>'}</div>`).join('')}${ex.map(x =>
+    `<p class="hex">${esc(x)}</p>`).join('')}</div>`;
 }
 
 function stateBlock(z, t) {
   const s = status(z, t);
   if (s.a === 'unk') return `<p class="state"><b>時間は現地で確認</b><span>県警の公開情報に時間・曜日がありません</span></p>`;
   if (s.a === 'ok') return `<p class="state ok"><b>${esc(s.text)}</b>${fmtLimit(z) ? `<span>1回 最大${esc(fmtLimit(z))}</span>` : ''}</p>`;
-  return `<p class="state"><b>${esc(s.text)}</b></p>`;
+  return `<p class="state no"><b>${esc(s.text)}</b></p>`;
 }
 
 function sourceLabel(z) {
@@ -492,6 +496,7 @@ function renderDetail(z) {
   const row = (k, v) => (v ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : '');
   const [srcTag, srcText] = sourceLabel(z);
   const more = [
+    row('車種', vehicles(z)),
     row('路線', z.route),
     row('区間', z.section),
     row('枠数', z.spaces != null ? `${z.spaces}台` + (z.truckSpaces ? `（うち貨物車 ${z.truckSpaces}台）` : '') : ''),
@@ -504,10 +509,10 @@ function renderDetail(z) {
       <div class="dtitle"><h2 id="dtitle">${esc(zoneName(z))}</h2><span>${esc(distText(d))}</span></div>
     </div>
     ${stateBlock(z, t)}
-    <div class="facts">
-      <div><span>最大</span><b>${esc(fmtLimit(z) || '—')}</b></div>
-      <div><span>料金</span><b>${esc(fmtFee(z) || '—')}</b></div>
-      <div><span>車種</span><b>${esc(vehicles(z))}</b></div>
+    <div class="dfacts">
+      <div>${I.clock}<b>${esc(z.span ? z.hours : '現地で確認')}</b><span>利用時間</span></div>
+      <div>${I.timer}<b>${esc(fmtLimit(z) || '—')}</b><span>最大</span></div>
+      <div>${I.yen}<b>${esc(fmtFee(z) || '—')}</b><span>料金</span></div>
     </div>
     ${hours(z, t)}
     <p class="note">${I.info}<span>時間外は、ほとんどの区間で駐車禁止です。現地の標識・メーターの表示が優先されます。</span></p>
@@ -880,6 +885,8 @@ function bind() {
 
   $('#track').addEventListener('click', onCardClick);
   $('#track').addEventListener('scroll', onTrackScroll, { passive: true });
+  // 人がカードの列に触れたら、自動で動かしている途中でもその操作を優先する
+  ['touchstart', 'wheel', 'pointerdown'].forEach(ev => $('#track').addEventListener(ev, () => { autoScroll = null; }, { passive: true }));
   $('#track').addEventListener('keydown', e => {
     const c = e.target.closest('.card[data-id]');
     if (c && e.target === c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); select(c.dataset.id, { pan: true }); }
