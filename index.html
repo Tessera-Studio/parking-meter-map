@@ -4,43 +4,70 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>パーキング・メーター・マップ</title>
-<meta name="description" content="東京・大阪・京都・札幌・神奈川のパーキング・メーター／パーキング・チケットが、いま（または指定した日時に）停められるかを地図と一覧で調べられます。">
-<meta name="theme-color" content="#FFFFFF">
+<meta name="description" content="東京・大阪・京都・札幌・神奈川のパーキング・メーター／パーキング・チケットの区間と、いま（または指定した日時に）使える時間を地図で調べられます。">
+<meta name="theme-color" content="#ECEAE4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141516" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-title" content="パーキング・メーター・マップ">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="vendor/leaflet.css?v=ec929f11">
-<link rel="stylesheet" href="styles.css?v=4e66e7c0">
+<link rel="stylesheet" href="styles.css?v=2c27157c">
 </head>
 <body>
 
 <main class="app">
   <div id="map"></div>
 
-  <div class="topbar">
-    <form class="search" id="qform" role="search">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
-      <input id="q" type="search" enterkeyhint="search" autocomplete="off" placeholder="場所・駅名（例：銀座）" aria-label="場所・駅名で探す" aria-controls="qpanel">
-    </form>
+  <!-- 上：検索・タイマー・チップ -->
+  <div class="top" id="top">
+    <div class="toprow">
+      <form class="search" id="qform" role="search">
+        <button class="qback" id="qback" type="button" aria-label="戻る" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <svg class="qicon" id="qicon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+        <input id="q" type="search" enterkeyhint="search" autocomplete="off" placeholder="行き先・駅名で探す" aria-label="行き先・駅名で探す" aria-controls="qpanel">
+        <button class="qclear" id="qclear" type="button" aria-label="行き先を消す" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </form>
+      <button class="ctl timerbtn" id="timerBtn" type="button" aria-label="タイマー"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg><i class="dot" aria-hidden="true"></i></button>
+    </div>
     <div class="qpanel" id="qpanel" hidden></div>
-    <div class="when" role="group" aria-label="いつ停めるか">
-      <button class="chip" type="button" id="whenNow" aria-pressed="true">いま</button>
-      <button class="chip" type="button" id="whenPick" aria-pressed="false">日時を指定</button>
-      <span class="whenset" id="whenSet" hidden>
-        <select id="whenDay" aria-label="日"></select>
-        <select id="whenHour" aria-label="時刻"></select>
-      </span>
+    <div class="chips">
+      <button class="chip dark" type="button" id="whenChip" aria-haspopup="true" aria-expanded="false" aria-controls="whenPop"><span id="whenText">いま</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+      <button class="chip" type="button" id="greenChip" aria-pressed="false"><i class="gl" aria-hidden="true"></i>緑だけ</button>
+    </div>
+    <div class="whenpop" id="whenPop" hidden>
+      <select id="whenDay" aria-label="日"></select>
+      <select id="whenHour" aria-label="時刻"></select>
+      <button class="chip" type="button" id="whenNow">いまに戻す</button>
     </div>
   </div>
 
-  <button class="mapbtn" id="locate" aria-label="現在地へ"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+  <!-- 右下：地図の切り替え・現在地 -->
+  <div class="mapctl" id="mapctl">
+    <button class="round" id="baseBtn" type="button" aria-pressed="false" aria-label="地図の表示を切り替え（いまはシンプル）" title="地図の表示を切り替え"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
+    <button class="round" id="locate" type="button" aria-label="現在地へ"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+  </div>
 
-  <section class="sheet" id="sheet" aria-label="近くの区間">
-    <button class="grip" id="grip" type="button" aria-label="一覧を広げる" aria-expanded="false"><span></span></button>
-    <div class="sheetbody" id="sheetBody"></div>
+  <!-- 下（広い画面では左）：区間のカード -->
+  <section class="cards" id="cards" aria-label="近くの区間">
+    <p class="desttag" id="destTag" hidden></p>
+    <div class="track" id="track"></div>
   </section>
+
+  <!-- 区間の詳細 -->
+  <section class="detail" id="detail" aria-label="区間の詳細" hidden>
+    <button class="round dback" id="dback" type="button" aria-label="戻る"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div class="dsheet" id="dsheet"></div>
+  </section>
+
+  <!-- 「ここへ行く」：どの地図で案内するか（初回だけ） -->
+  <div class="scrim" id="goScrim" hidden>
+    <section class="gosheet" id="goSheet" role="dialog" aria-modal="true" aria-labelledby="goTitle"></section>
+  </div>
+
+  <!-- タイマー -->
+  <section class="timer" id="timer" role="dialog" aria-modal="true" aria-label="タイマー" hidden></section>
 
   <div class="empty" id="empty" hidden>
     <div class="card">
@@ -53,6 +80,6 @@
 <script src="config.js?v=64f92221"></script>
 <script src="vendor/leaflet.js?v=5a640ff8"></script>
 <script src="zones.js?v=0a80f9b4"></script>
-<script src="app.js?v=49f8e5a2"></script>
+<script src="app.js?v=4fc8597f"></script>
 </body>
 </html>

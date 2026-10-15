@@ -1,22 +1,37 @@
-/* パーキング・メーター・マップ
-   1画面だけ。上で「場所」と「いつ（いま／日時を指定）」を決めると、
-   地図の線が「停められる＝緑／停められない＝灰」になり、下（広い画面では左）に近い順の一覧が出る。 */
+/* パーキング・メーター・マップ（画面デザイン v2 / docs/design-v2.md）
+   地図が主役。上に検索とチップ、下（広い画面では左）に区間のカードを横に並べる。
+   区間は「道路に沿った線＋Pマーク」。緑＝その時刻に使える区間、それ以外（時間外・時間不明）はグレー。 */
 const GINZA = [35.6717, 139.7650]; // 現在地が取れないときに最初に見せる場所
-const LIST_MAX = 40;   // 一覧に出す件数
-const NEAR_M = 1000;   // 「停められる ◯区間」と数える範囲
-const SMALL_ZOOM = 14; // これより引いた地図では、線の代わりに点で出す（線が短すぎて見えないため）
+const LIST_MAX = 40;   // カードに出す件数
+const NEAR_M = 1000;   // カードに出す範囲（起点から区間の線まで）
+const SMALL_ZOOM = 14; // これより引いた地図では線を省き、Pマークだけ出す
+const TINY_ZOOM = 12;  // これより引いた地図では、Pマークを小さくする
+const WALK_M_MIN = 80; // 徒歩1分の距離
+const DEST_R = 400;    // 行き先のまわりに描く円（徒歩5分）
+const CAR_KMH = 20;    // 「ここへ行く」の所要時間の目安（直線距離×1.4 をこの速さで）
 
+// 地図の下地は2つ。ふだんは色の少ない「シンプル」（国土地理院の淡色地図）、切り替えで「詳しい」（OpenStreetMap）
+// config.js に CARTO の鍵があれば、シンプルは CARTO（ダークテーマにも合わせる）にする
 const CARTO_KEY = (window.PAWMAP_CONFIG || {}).cartoApiKey || '';
-const BASE = CARTO_KEY ? {
-  light: `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`,
-  dark:  `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`,
-  attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-  subdomains: 'abcd', maxNativeZoom: 20,
-} : {
-  light: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  dark:  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  subdomains: 'abc', maxNativeZoom: 19,
+const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const BASES = {
+  simple: CARTO_KEY ? {
+    light: `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`,
+    dark:  `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`,
+    attr: `${OSM_ATTR} &copy; <a href="https://carto.com/attributions">CARTO</a>`,
+    subdomains: 'abcd', maxNativeZoom: 20,
+  } : {
+    light: 'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
+    dark:  'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
+    attr: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>',
+    subdomains: 'abc', maxNativeZoom: 18,
+  },
+  detail: {
+    light: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    dark:  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attr: OSM_ATTR,
+    subdomains: 'abc', maxNativeZoom: 19,
+  },
 };
 const SRC_ATTR = '区間データ：<a href="https://parking-meter.jp/" target="_blank" rel="noopener">警視庁</a>（<a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener">CC BY 4.0</a>）・<a href="https://www.police.pref.osaka.lg.jp/kotsu/tyusya/1/1/index.html" target="_blank" rel="noopener">大阪府警察</a>・神奈川県警察・北海道警察・京都府警察（線は OpenStreetMap から作成）';
 const PREFS = ['北海道', '東京都', '神奈川県', '京都府', '大阪府'];
@@ -39,26 +54,52 @@ const MUNI = {
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch (e) { return d; } };
+const save = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 
-// at：指定した日時（null ならいま）。sel：開いている区間。moved：人が地図を動かしたか（動かしたら現在地へ勝手に戻さない）
-const state = { at: null, sel: null, here: null, moved: false };
+/* at：指定した日時（null ならいま）。sel：選んでいる区間。moved：人が地図を動かしたか（動かしたら現在地へ勝手に戻さない）
+   green：「緑だけ」。dest：行き先（地名検索で選んだ場所）。detail：詳細を出しているか。rows：いまのカード */
+const state = { at: null, sel: null, here: null, moved: false, green: false, dest: null, prevView: null, detail: false, rows: [] };
 let zones = [];
+let byId = new Map();
 let holidays = { years: [], dates: {} }; // data/holidays.json
-let map, tiles, layer, hereMark, placeMark;
-let hits = []; // 場所の候補
+let map, tiles, layer, marks, hereMark, carMark;
+let quiet = false; // カードをめくって地図を動かしたとき、カードを並べ直さない
+let hits = [];     // 場所の候補
 const addrCache = new Map();
+
+/* ---------- アイコン ---------- */
+const svg = d => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
+const I = {
+  clock: svg('<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'),
+  go: svg('<path d="M20 4L3 11l7 3 3 7z"/>'),
+  pin: svg('<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'),
+  flag: svg('<path d="M6 21V4M6 4h11l-2.5 4L17 12H6"/>'),
+  map: svg('<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/>'),
+  info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'),
+  chev: svg('<path d="M9 6l6 6-6 6"/>'),
+  down: svg('<path d="M6 9l6 6 6-6"/>'),
+  play: svg('<path d="M8 5l11 7-11 7z" fill="currentColor"/>'),
+  stop: svg('<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>'),
+  car: svg('<path d="M5 16V11l2-5h10l2 5v5M5 16h14M5 16v2M19 16v2M7.5 13h.01M16.5 13h.01"/>'),
+};
 
 /* ---------- 言い回し ---------- */
 const KIND = { meter: 'パーキング・メーター', ticket: 'パーキング・チケット' };
 const hm = t => `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+const hmOf = d => hm(d.getHours() * 60 + d.getMinutes());
 const fmtLimit = z => (z.limitMin == null ? '' : z.limitMin >= 60 && z.limitMin % 60 === 0 ? `${z.limitMin / 60}時間` : `${z.limitMin}分`);
 const fmtFee = z => (z.feeYen == null ? '' : `${z.feeYen.toLocaleString()}円`);
-const terms = z => [fmtLimit(z), fmtFee(z)].filter(Boolean).join('・') || KIND[z.kind];
-const place = z => z.addr || terms(z);
-const vehicles = z => (z.truckOnly ? '貨物車専用（積載量5トン未満）'
-  : [z.car && '普通車', z.truck && '貨物用あり', z.bike && '二輪車'].filter(Boolean).join('・'));
+const terms = z => [fmtLimit(z) && `最大${fmtLimit(z)}`, fmtFee(z)].filter(Boolean).join(' · ') || KIND[z.kind];
+const kindShort = z => (z.kind === 'ticket' ? 'チケット' : 'メーター');
+const zoneName = z => (z.addr ? z.addr.slice(z.ward.length) || z.addr : addrCache.get(z.id) || terms(z));
+const kicker = z => [`${z.pref === '北海道' ? '北海道' : z.pref}${z.ward}`, KIND[z.kind]].filter(Boolean).join(' · ');
+const vehicles = z => (z.truckOnly ? '貨物車専用'
+  : [z.car && '普通車', z.truck && '貨物', z.bike && '二輪'].filter(Boolean).join('・') || '—');
 const prefName = p => ({ 北海道: '札幌' }[p] || p.replace(/[都府県]$/, ''));
 const fmtDist = m => (m < 1000 ? `${Math.round(m / 10) * 10}m` : `${(m / 1000).toFixed(1)}km`);
+const walkMin = m => Math.max(1, Math.ceil(m / WALK_M_MIN));
+const fmtMin = m => (m >= 60 ? `${Math.floor(m / 60)}時間${m % 60 ? `${m % 60}分` : ''}` : `${m}分`);
 
 // きょう／あす／◯曜（いまの日付から見て）
 function dayWord(t) {
@@ -68,13 +109,13 @@ function dayWord(t) {
   return d === 0 ? 'きょう' : d === 1 ? 'あす' : `${'日月火水木金土'[t.getDay()]}曜`;
 }
 const when = () => state.at || new Date();
-const whenText = () => (state.at ? `${dayWord(state.at)} ${state.at.getHours()}:00` : 'いま');
+const whenLabel = () => (state.at ? `${dayWord(state.at)} ${hmOf(state.at)}` : `いま ${hmOf(new Date())}`);
 
-/* ---------- 停められるか ---------- */
-// ok＝停められる／no＝時間外／unk＝時間が公開されていない（神奈川など）
+/* ---------- 使える時間か ---------- */
+// ok＝使える／no＝時間外／unk＝時間が公開されていない（神奈川など）
 const avail = (z, t = when()) => (z.days === 'unknown' || !z.span ? 'unk' : Zones.openNow(z, t, holidays.dates) ? 'ok' : 'no');
 
-// 次に停められるようになる時刻（8日先まで見る。冬期休止などで見つからなければ null）
+// 次に使えるようになる時刻（8日先まで見る。冬期休止などで見つからなければ null）
 function nextOpen(z, from) {
   if (!z.span) return null;
   for (let d = 0; d < 8; d++) {
@@ -86,103 +127,148 @@ function nextOpen(z, from) {
   return null;
 }
 
+// バッジの文言。緑は終わりの時刻だけ、時間外は次に使える時刻だけ
 function status(z, t = when()) {
   const a = avail(z, t);
-  if (a === 'unk') return { a, text: '時間は現地の標識で確認' };
-  if (a === 'ok') {
-    const left = z.span[1] - (t.getHours() * 60 + t.getMinutes());
-    return { a, text: `停められる・${hm(z.span[1])}まで`, soon: !state.at && left <= 60 ? `あと${left}分` : '' };
-  }
+  if (a === 'unk') return { a, text: '時間は現地で確認' };
+  if (a === 'ok') return { a, text: `${hm(z.span[1])}まで` };
   const n = nextOpen(z, t);
-  return { a, text: n ? `時間外・${dayWord(n)} ${hm(z.span[0])}から` : '時間外（冬期は休止）', next: n };
+  return { a, text: n ? `${dayWord(n)} ${hmOf(n)}から` : '冬期休止中', next: n };
 }
-const stHtml = s => `<span class="st ${s.a}">${esc(s.text)}${s.soon ? `<span class="soon">${esc(s.soon)}</span>` : ''}</span>`;
+const badge = s => (s.a === 'ok'
+  ? `<span class="badge ok">${I.clock}${esc(s.text)}</span>`
+  : `<span class="badge off">${esc(s.text)}</span>`);
 
 /* ---------- 地図 ---------- */
 const darkQ = window.matchMedia('(prefers-color-scheme: dark)');
 const narrow = () => window.innerWidth <= 760;
 
+let baseKind = 'simple';
+try { baseKind = localStorage.getItem('pmm-base') === 'detail' ? 'detail' : 'simple'; } catch (e) {}
+
 function setTiles() {
+  const base = BASES[baseKind];
   if (tiles) map.removeLayer(tiles);
-  tiles = L.tileLayer(darkQ.matches ? BASE.dark : BASE.light, {
-    attribution: BASE.attr, subdomains: BASE.subdomains,
-    maxNativeZoom: BASE.maxNativeZoom, maxZoom: 21, detectRetina: true,
+  tiles = L.tileLayer(darkQ.matches ? base.dark : base.light, {
+    attribution: base.attr, subdomains: base.subdomains,
+    maxNativeZoom: base.maxNativeZoom, maxZoom: 21, detectRetina: true,
   }).addTo(map);
+  // ダークテーマで明るい下地しかないときは、色を反転して暗くする（区間の線は別の層なのでそのまま）
+  document.body.classList.toggle('dim-tiles', darkQ.matches && !(baseKind === 'simple' && CARTO_KEY));
+  const b = $('#baseBtn');
+  b.setAttribute('aria-pressed', baseKind === 'detail');
+  b.setAttribute('aria-label', `地図の表示を切り替え（いまは${baseKind === 'detail' ? '詳しい地図' : 'シンプル'}）`);
+}
+function toggleBase() {
+  baseKind = baseKind === 'detail' ? 'simple' : 'detail';
+  try { localStorage.setItem('pmm-base', baseKind); } catch (e) {}
+  setTiles();
 }
 
-// 一覧が地図の下（スマホ）または左（広い画面）を隠すので、見えている範囲の中央を出すためのずれ
+// 地図のうち、上の部品・カード・詳細に隠れていない範囲（画面の座標）
+function region() {
+  const W = window.innerWidth, H = window.innerHeight;
+  if (state.detail) {
+    if (narrow()) return { l: 0, t: 0, r: W, b: $('#dsheet').getBoundingClientRect().top };
+    return { l: $('#detail').offsetWidth, t: 0, r: W, b: H };
+  }
+  const t = $('.chips').getBoundingClientRect().bottom;
+  if (narrow()) return { l: 0, t, r: W, b: $('#cards').getBoundingClientRect().top };
+  return { l: $('#cards').offsetWidth, t, r: W, b: H };
+}
+// 地図の中心から、見えている範囲の中心までのずれ
 function offset() {
-  const sh = $('#sheet');
-  return narrow() ? L.point(0, (sh.offsetHeight - 110) / 2) : L.point(-sh.offsetWidth / 2, 0);
+  const r = region();
+  return L.point(window.innerWidth / 2 - (r.l + r.r) / 2, window.innerHeight / 2 - (r.t + r.b) / 2);
 }
 function visibleCenter() {
-  const c = map.project(map.getCenter()).subtract(offset());
-  const ll = map.unproject(c);
+  const ll = map.unproject(map.project(map.getCenter()).subtract(offset()));
   return [ll.lat, ll.lng];
 }
-function centerOn(ll, zoom) {
-  map.setView(map.unproject(map.project(ll, zoom).add(offset()), zoom), zoom, { animate: false });
+function centerOn(ll, zoom = map.getZoom(), animate = false) {
+  const c = map.unproject(map.project(ll, zoom).add(offset()), zoom);
+  if (animate) map.flyTo(c, zoom, { duration: .4 }); else map.setView(c, zoom, { animate: false });
 }
-// 区間が見えるように寄せるときの余白（スマホで詳細を開くときは、広がったあとの一覧の高さで見る）
+// 区間を見えている範囲に入れるときの余白
 function pad() {
-  const sh = $('#sheet');
-  const h = sh.classList.contains('mid') ? window.innerHeight * .62 : sh.offsetHeight;
-  return narrow()
-    ? { paddingTopLeft: [30, 130], paddingBottomRight: [30, h + 20] }
-    : { paddingTopLeft: [sh.offsetWidth + 40, 120], paddingBottomRight: [40, 40] };
+  const r = region();
+  return { paddingTopLeft: [r.l + 30, r.t + 30], paddingBottomRight: [window.innerWidth - r.r + 30, window.innerHeight - r.b + 30] };
 }
 
 function initMap() {
-  let start = { c: GINZA, z: 15 };
-  try { start = JSON.parse(localStorage.getItem('pmm-last')) || start; } catch (e) {}
+  const start = load('pmm-last', null) || { c: GINZA, z: 16 };
   map = L.map('map', { center: start.c, zoom: start.z, zoomControl: false, minZoom: 6, maxZoom: 21, preferCanvas: true });
   L.control.zoom({ position: 'bottomright' }).addTo(map);
+  map.attributionControl.setPosition('bottomright');
   map.attributionControl.addAttribution(SRC_ATTR);
   setTiles();
-  darkQ.addEventListener?.('change', () => { setTiles(); draw(); });
+  darkQ.addEventListener?.('change', () => { setTiles(); draw(); drawDest(); });
   layer = L.layerGroup().addTo(map);
-  // 現在地・探した場所の印は、線を描き直しても隠れないよう別の層に置く
-  map.createPane('marks').style.zIndex = 450;
-  map.on('dragstart', () => { state.moved = true; });
-  map.on('zoomend', draw);
+  marks = L.layerGroup().addTo(map); // 行き先の印と円
+  map.on('dragstart', () => { state.moved = true; quiet = false; });
   map.on('moveend', () => {
-    renderList();
-    try { localStorage.setItem('pmm-last', JSON.stringify({ c: visibleCenter(), z: map.getZoom() })); } catch (e) {}
+    if (quiet || state.detail || state.dest) { quiet = false; draw(); } else renderCards();
+    save('pmm-last', { c: visibleCenter(), z: map.getZoom() });
   });
 }
 
 const colors = () => {
   const cs = getComputedStyle(document.documentElement);
-  return { ok: cs.getPropertyValue('--ok').trim(), no: cs.getPropertyValue('--no').trim(), ink: cs.getPropertyValue('--ink').trim() };
+  const v = k => cs.getPropertyValue(k).trim();
+  return { ok: v('--ok'), off: v('--off'), ink: v('--ink') };
 };
-const weight = () => Math.max(4, Math.min(10, map.getZoom() - 8));
 
+// 区間の線とPマーク。重なり順はグレー → 緑 → 選んだ区間
 function draw() {
   if (!zones.length) return;
   layer.clearLayers();
   const col = colors();
   const t = when();
-  const small = map.getZoom() < SMALL_ZOOM;
-  const order = { no: 0, unk: 1, ok: 2 }; // 停められる区間をいちばん上に
-  zones.map(z => ({ z, a: avail(z, t) })).sort((p, q) => order[p.a] - order[q.a]).forEach(({ z, a }) => {
-    const c = a === 'ok' ? col.ok : col.no;
-    const on = z.id === state.sel;
-    const w = weight();
+  const zoom = map.getZoom();
+  const small = zoom < SMALL_ZOOM;
+  const tiny = zoom < TINY_ZOOM;
+  const view = map.getBounds().pad(.3);
+  const items = [];
+  zones.forEach(z => {
+    const sel = z.id === state.sel;
+    if (!sel && !view.intersects(z.bounds)) return;
+    const a = avail(z, t);
+    if (state.green && a !== 'ok' && !sel) return;
+    items.push({ z, a, sel, rank: sel ? 2 : a === 'ok' ? 1 : 0 });
+  });
+  items.sort((p, q) => p.rank - q.rank);
+
+  items.forEach(({ z, a, sel, rank }) => {
+    const ok = a === 'ok';
+    const c = ok ? col.ok : col.off;
     const parts = [];
-    const dot = ll => L.circleMarker(ll, { radius: on ? 8 : a === 'ok' ? 4 : 3, color: on ? col.ink : c, weight: on ? 3 : 0, fillColor: c, fillOpacity: a === 'unk' ? .45 : .9 });
-    if (small) parts.push(dot(z.center));
-    else {
+    if (!small) {
       z.lines.forEach(l => {
-        if (l.length === 1) { parts.push(dot(l[0])); return; }
-        if (on) parts.push(L.polyline(l, { color: col.ink, weight: w + 8, opacity: 1, lineCap: 'butt' }));
-        parts.push(L.polyline(l, { color: c, weight: on ? w + 4 : w, opacity: a === 'ok' ? .95 : .75, lineCap: 'butt', dashArray: a === 'unk' ? '6 8' : null }));
+        if (l.length < 2) return;
+        if (sel) {
+          parts.push(L.polyline(l, { color: col.ink, weight: 15, opacity: 1, lineCap: 'round' }));
+          parts.push(L.polyline(l, { color: c, weight: 9, opacity: 1, lineCap: 'round' }));
+        } else if (ok) {
+          parts.push(L.polyline(l, { color: '#fff', weight: 11, opacity: 1, lineCap: 'round' }));
+          parts.push(L.polyline(l, { color: c, weight: 7, opacity: 1, lineCap: 'round' }));
+        } else {
+          parts.push(L.polyline(l, { color: c, weight: 4, opacity: 1, lineCap: 'butt', dashArray: a === 'unk' ? '4 6' : null }));
+        }
+        // 細い線でも押しやすいよう、見えない太い当たり判定を重ねる
+        parts.push(L.polyline(l, { color: c, weight: 18, opacity: 0 }));
       });
     }
-    parts.forEach(p => { p.on('click', () => openDetail(z, false)); layer.addLayer(p); });
+    const tag = ok && !small && !sel ? `<span class="ptag">〜${esc(hm(z.span[1]))}</span>` : '';
+    const html = `<div class="pw${sel ? ' sel' : ''}" data-id="${esc(z.id)}"><div class="p${ok ? ' ok' : ''}${tiny && !sel ? ' tiny' : ''}">P</div>${tag}</div>`;
+    parts.push(L.marker(z.center, {
+      icon: L.divIcon({ className: 'pm', html, iconSize: [0, 0] }),
+      zIndexOffset: rank * 1000, keyboard: false, title: zoneName(z),
+    }));
+    parts.forEach(p => { p.on('click', () => pickOnMap(z)); layer.addLayer(p); });
   });
 }
 
-/* ---------- 一覧 ---------- */
+/* ---------- カード ---------- */
 function meters(a, b) {
   const R = 6371000, r = Math.PI / 180;
   const dLat = (b[0] - a[0]) * r, dLng = (b[1] - a[1]) * r;
@@ -191,49 +277,151 @@ function meters(a, b) {
 }
 // 区間のうち、起点にいちばん近い点までの距離
 const nearest = (z, o) => Math.min(...z.lines.flat().map(p => meters(o, p)));
+// 距離を測る起点：行き先があれば行き先、なければ見えている地図の中心
+const origin = () => (state.dest ? [state.dest.lat, state.dest.lng] : visibleCenter());
+const distText = d => (state.dest ? `${state.dest.name}まで 徒歩${walkMin(d)}分` : `徒歩 ${walkMin(d)}分`);
 
-function rowHtml({ z, d, s }) {
-  const [, num, unit] = fmtDist(d).match(/^([\d.]+)(.*)$/);
-  const meta = [terms(z), z.kind === 'ticket' ? 'チケット' : 'メーター'].join('・');
-  return `
-    <button class="row ${s.a}" type="button" data-id="${esc(z.id)}">
-      <span class="dist">${num}<small>${unit}</small></span>
-      <span class="body"><span class="nm">${esc(place(z))}</span>${stHtml(s)}<span class="meta">${esc(meta)}</span></span>
-    </button>`;
-}
-
-function renderList() {
-  if (state.sel || !zones.length) return; // 詳細を出しているあいだはそのまま
-  const o = visibleCenter();
+// 起点から1km以内の区間。緑を近い順、その後にグレーを近い順。extra は一覧の外でも入れる区間（地図で押したとき）
+function computeRows(extra) {
+  const o = origin();
   const t = when();
-  // 先に中心からの距離でざっと絞り、近いものだけ線の端まで測る
-  const rows = zones.map(z => ({ z, c: meters(o, z.center) })).sort((a, b) => a.c - b.c).slice(0, LIST_MAX + 20)
-    .map(({ z }) => ({ z, d: nearest(z, o), s: status(z, t) })).sort((a, b) => a.d - b.d).slice(0, LIST_MAX);
-  const ok = rows.filter(r => r.s.a === 'ok');
-  const rest = rows.filter(r => r.s.a !== 'ok');
-  const nOk = zones.filter(z => meters(o, z.center) <= NEAR_M && avail(z, t) === 'ok').length;
-  const w = whenText();
-
-  let notice = '';
-  if (!rows.length || rows[0].d > 3000) {
-    notice = `<p class="notice">この近くには区間がありません${rows.length ? `（いちばん近くて ${fmtDist(rows[0].d)}）` : ''}。地図を動かすか、上に場所を入れてください。</p>`;
-  } else if (!nOk) {
-    const soonest = rest.map(r => r.s.next).filter(Boolean).sort((a, b) => a - b)[0];
-    notice = `<p class="notice"><b>${esc(w)}、この近くで停められる区間はありません。</b>${soonest ? `<br>${esc(dayWord(soonest))} ${esc(hm(soonest.getHours() * 60 + soonest.getMinutes()))}から停められます。` : ''}</p>`;
+  const rows = zones.filter(z => meters(o, z.center) <= NEAR_M + 1500)
+    .map(z => ({ z, d: nearest(z, o) }))
+    .filter(r => r.d <= NEAR_M)
+    .map(r => ({ ...r, s: status(r.z, t) }));
+  const byD = (p, q) => p.d - q.d;
+  let ok = rows.filter(r => r.s.a === 'ok').sort(byD);
+  let rest = state.green && ok.length ? [] : rows.filter(r => r.s.a !== 'ok').sort(byD);
+  let list = [...ok, ...rest].slice(0, LIST_MAX);
+  if (extra && !list.some(r => r.z.id === extra.id)) {
+    const r = { z: extra, d: nearest(extra, o), s: status(extra, t) };
+    list.push(r);
+    ok = list.filter(x => x.s.a === 'ok').sort(byD);
+    rest = list.filter(x => x.s.a !== 'ok').sort(byD);
+    list = [...ok, ...rest];
   }
-
-  $('#sheetBody').innerHTML = `
-    <p class="sum"><b>${esc(w)}停められる</b><span class="n">${nOk}</span><span>区間</span><small>地図の中心から1km以内</small></p>
-    <p class="key"><span><i class="sw"></i>停められる</span><span><i class="sw no"></i>時間外</span><span><i class="sw unk"></i>時間は現地で確認</span></p>
-    ${notice}
-    <div class="rows">
-      ${ok.length ? `<h3>停められる（近い順）</h3>${ok.map(rowHtml).join('')}` : ''}
-      ${rest.length ? `<h3>${state.at ? 'その時間は' : 'いまは'}停められない</h3>${rest.map(rowHtml).join('')}` : ''}
-    </div>
-    <p class="foot">${SRC_ATTR}。現地の標識・メーターの表示が優先されます。</p>`;
+  return list;
 }
 
-/* ---------- 詳細 ---------- */
+function cardHtml(r, i, n, anyOk) {
+  const { z, d, s } = r;
+  let btns;
+  if (!anyOk && s.a === 'no') {
+    // 近くに緑がないとき：次に使える時刻で見直すか、近くの駐車場を探す
+    btns = (s.next ? `<button class="btn dark" type="button" data-act="at" data-t="${s.next.getTime()}">${esc(`${dayWord(s.next)} ${hmOf(s.next)}`)} で見る</button>` : `<button class="btn sub" type="button" data-act="detail">詳細</button>`)
+      + `<button class="btn sub" type="button" data-act="lots">近くの駐車場 ↗</button>`;
+  } else {
+    btns = `<button class="btn ${s.a === 'ok' ? 'go' : 'dark'}" type="button" data-act="go">${I.go}ここへ行く</button>`
+      + `<button class="btn sub" type="button" data-act="detail">詳細</button>`;
+  }
+  return `
+    <article class="card ${s.a === 'ok' ? 'ok' : 'off'}${z.id === state.sel ? ' sel' : ''}" data-id="${esc(z.id)}" tabindex="0" aria-label="${esc(`${zoneName(z)}、${s.text}`)}">
+      <div class="chead">${badge(s)}<span class="cnum">${i + 1} / ${n}</span></div>
+      <div class="crow"><span class="cname">${esc(zoneName(z))}</span><span class="cdist">${esc(distText(d))}</span></div>
+      <div class="cmeta">${esc([terms(z), kindShort(z)].join(' · '))}</div>
+      <div class="cbtns">${btns}</div>
+    </article>`;
+}
+
+function renderCards(extra) {
+  if (!zones.length || state.detail) return;
+  const list = computeRows(extra);
+  state.rows = list;
+  const anyOk = list.some(r => r.s.a === 'ok');
+  const tag = $('#destTag');
+  tag.hidden = !state.dest;
+  if (state.dest) tag.innerHTML = `${esc(state.dest.name)}の近く <b>${list.length}か所</b>（近い順）`;
+
+  if (!list.length) {
+    // 1km以内に区間がない：いちばん近い区間を案内する
+    const o = origin();
+    const near = zones.reduce((b, z) => { const d = meters(o, z.center); return !b || d < b.d ? { z, d } : b; }, null);
+    state.sel = null;
+    $('#track').innerHTML = `
+      <article class="card none">
+        <p>この近く（1km以内）には区間がありません${near ? `。いちばん近い区間まで ${esc(fmtDist(near.d))}` : ''}</p>
+        ${near ? `<div class="cbtns"><button class="btn dark" type="button" data-act="nearest" data-id="${esc(near.z.id)}">いちばん近い区間へ</button><span></span></div>` : ''}
+      </article>`;
+    draw();
+    return;
+  }
+  if (!list.some(r => r.z.id === state.sel)) state.sel = list[0].z.id;
+  $('#track').innerHTML = list.map((r, i) => cardHtml(r, i, list.length, anyOk)).join('');
+  scrollToCard(state.sel, false);
+  draw();
+}
+
+const cardEl = id => [...document.querySelectorAll('#track .card')].find(c => c.dataset.id === id);
+function scrollToCard(id, smooth) {
+  const c = cardEl(id);
+  if (!c) return;
+  const tr = $('#track');
+  const behavior = smooth ? 'smooth' : 'instant';
+  if (narrow()) tr.scrollTo({ left: c.offsetLeft - 16, behavior });
+  else if (c.offsetTop < tr.scrollTop || c.offsetTop + c.offsetHeight > tr.scrollTop + tr.clientHeight) tr.scrollTo({ top: c.offsetTop - 16, behavior });
+}
+
+// 区間を選ぶ。pan：見えていなければ地図を少し動かす。scroll：カードの列をその区間まで動かす
+function select(id, { pan = false, scroll = false } = {}) {
+  const changed = id !== state.sel;
+  state.sel = id;
+  document.querySelectorAll('#track .card').forEach(c => c.classList.toggle('sel', c.dataset.id === id));
+  if (changed) draw();
+  if (scroll) scrollToCard(id, true);
+  if (pan) panToZone(byId.get(id));
+}
+function panToZone(z) {
+  if (!z) return;
+  const r = region();
+  const p = map.latLngToContainerPoint(z.center);
+  const mx = (r.r - r.l) * .2, my = (r.b - r.t) * .2;
+  if (p.x > r.l + mx && p.x < r.r - mx && p.y > r.t + my && p.y < r.b - my) return;
+  quiet = true;
+  map.panTo(map.unproject(map.project(z.center).add(offset())), { animate: true, duration: .35 });
+}
+
+// 地図の線やPを押したとき
+function pickOnMap(z) {
+  if (state.detail) { openDetail(z); return; }
+  if (!state.rows.some(r => r.z.id === z.id)) renderCards(z);
+  select(z.id, { scroll: true });
+}
+
+// カードの列を横にめくったら、いちばん左に来たカードを選ぶ
+let scrollTimer;
+function onTrackScroll() {
+  if (!narrow()) return;
+  clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(() => {
+    const tr = $('#track');
+    let best = null, bd = Infinity;
+    tr.querySelectorAll('.card[data-id]').forEach(c => {
+      const d = Math.abs(c.offsetLeft - 16 - tr.scrollLeft);
+      if (d < bd) { bd = d; best = c; }
+    });
+    if (best && best.dataset.id !== state.sel) select(best.dataset.id, { pan: true });
+  }, 140);
+}
+
+function onCardClick(e) {
+  const b = e.target.closest('[data-act]');
+  const card = e.target.closest('.card');
+  if (b) {
+    const z = byId.get(b.dataset.id || card?.dataset.id);
+    const act = b.dataset.act;
+    if (act === 'go') startGo(z);
+    else if (act === 'detail') openDetail(z);
+    else if (act === 'at') setAt(new Date(+b.dataset.t));
+    else if (act === 'lots') {
+      const [lat, lng] = z ? z.center : origin();
+      window.open(`https://www.google.com/maps/search/${encodeURIComponent('駐車場')}/@${lat},${lng},16z`, '_blank', 'noopener');
+    } else if (act === 'nearest' && z) { state.moved = true; centerOn(z.center, 16); }
+    return;
+  }
+  if (card?.dataset.id) select(card.dataset.id, { pan: true, scroll: true });
+}
+
+/* ---------- 区間の詳細 ---------- */
 async function address(z) {
   if (z.addr) return z.addr;
   if (addrCache.has(z.id)) return addrCache.get(z.id);
@@ -244,90 +432,279 @@ async function address(z) {
   return text;
 }
 
-// 曜日ごとの利用時間。指定した日（いまならきょう）の行に色を付ける
-function week(z, t) {
+// 利用できる時間。曜日ごとの時間が全部同じなら「毎日」の1行、違うときだけ曜日別。使えない期間は小さい灰色の行
+function hours(z, t) {
   if (!z.span) return '';
   const r = z.rules.join(' ');
   const dow = t.getDay();
   const hol = !!holidays.dates[Zones.ymd(t)];
-  const rows = [
-    ['月〜金', z.hours, !hol && dow >= 1 && dow <= 5],
-    ['土', /土/.test(r) ? '' : z.hours, !hol && dow === 6],
-    ['日・祝', /日曜|休日/.test(r) ? '' : z.hours, hol || dow === 0],
-  ];
-  if (z.months) rows.push([`${z.months[1] % 12 + 1}月〜${(z.months[0] + 10) % 12 + 1}月`, '', false]);
-  if (/1月1日/.test(r)) rows.push(['1月1日〜3日', '', false]);
-  return `<div class="week"><h3>停められる時間</h3>${rows.map(([k, v, on]) =>
-    `<div class="${on ? 'on' : ''}"><span>${k}</span><span class="${v ? '' : 'x'}">${v ? esc(v) : '停められない'}</span></div>`).join('')}</div>`;
+  const wk = z.hours;
+  const sat = /土/.test(r) ? '' : z.hours;
+  const sun = /日曜|休日/.test(r) ? '' : z.hours;
+  const isSun = hol || dow === 0, isSat = !isSun && dow === 6;
+  let rows;
+  if (wk === sat && sat === sun) rows = [['毎日', wk, true]];
+  else if (wk === sat) rows = [['月〜土', wk, !isSun], ['日・祝', sun, isSun]];
+  else rows = [['月〜金', wk, !isSun && !isSat], ['土', sat, isSat], ['日・祝', sun, isSun]];
+  const closed = [];
+  if (z.months) closed.push(`${z.months[1] % 12 + 1}月〜${(z.months[0] + 10) % 12 + 1}月`);
+  if (/1月1日/.test(r)) closed.push('1月1日〜3日');
+  return `<div class="hours"><h3>利用できる時間</h3>${rows.map(([k, v, on]) =>
+    `<div class="${on && v ? 'on' : ''}"><span>${k}</span>${v ? `<b>${esc(v)}</b>` : '<span class="x">利用不可</span>'}</div>`).join('')}${closed.map(k =>
+    `<div class="closed"><span>${k}</span><span>利用不可</span></div>`).join('')}</div>`;
 }
 
-function verdict(z, t) {
+function stateBlock(z, t) {
   const s = status(z, t);
-  const w = state.at ? `${whenText()}は` : 'いま';
-  if (s.a === 'unk') return `<p class="verdict"><b>時間は現地の標識で確認してください</b><span>県警の公開情報に時間・曜日がありません</span></p>`;
-  if (s.a === 'ok') {
-    return `<p class="verdict ok"><b>${esc(w)}停められます</b><span>${esc([`${hm(z.span[1])}まで`, fmtLimit(z) && `最大${fmtLimit(z)}`, fmtFee(z)].filter(Boolean).join('・'))}${s.soon ? ` <span class="soon">${esc(s.soon)}で時間外</span>` : ''}</span></p>`;
-  }
-  return `<p class="verdict"><b>${esc(w)}${state.at ? '' : 'は'}停められません</b><span>${s.next ? `${esc(dayWord(s.next))} ${esc(hm(z.span[0]))}から停められます` : '冬期は休止しています'}</span></p>`;
+  if (s.a === 'unk') return `<p class="state"><b>時間は現地で確認</b><span>県警の公開情報に時間・曜日がありません</span></p>`;
+  if (s.a === 'ok') return `<p class="state ok"><b>${esc(s.text)}</b>${fmtLimit(z) ? `<span>1回 最大${esc(fmtLimit(z))}</span>` : ''}</p>`;
+  return `<p class="state"><b>${esc(s.text)}</b></p>`;
 }
 
-function openDetail(z, fly = true) {
-  state.sel = z.id;
-  draw();
-  setSheet(narrow() ? 'mid' : '');
+function sourceLabel(z) {
+  if (z.days === 'unknown' || !z.span) return ['時間は現地で確認', z.pref === '神奈川県' ? '神奈川県警察' : z.source || '県警の公開情報'];
+  if (z.pref === '東京都') return ['公式データ', '警視庁 オープンデータ（2026年4月）'];
+  if (z.pref === '大阪府') return ['おおよその位置', '大阪府警察の資料から作成'];
+  if (z.pref === '北海道') return ['公式データ', '北海道警察の公開情報'];
+  if (z.pref === '京都府') return ['公式データ', '京都府警察の公開情報'];
+  return ['公式データ', z.source || '各警察の公開情報'];
+}
+
+function renderDetail(z) {
   const t = when();
   const [lat, lng] = z.center;
+  const r = state.rows.find(x => x.z.id === z.id);
+  const d = r ? r.d : nearest(z, origin());
   const row = (k, v) => (v ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : '');
-  $('#sheetBody').innerHTML = `
-    <button class="back" type="button" id="back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>一覧に戻る</button>
-    <div class="detail">
-      <p class="dkick">${esc([prefName(z.pref), z.ward, KIND[z.kind]].filter(Boolean).join('・'))}</p>
-      <h2 id="dtitle">${esc(z.addr ? z.addr.slice(z.ward.length) || z.addr : '住所を調べています…')}</h2>
-      ${verdict(z, t)}
-      <div class="facts">
-        <div><span>最大</span><b>${esc(fmtLimit(z) || '—')}</b></div>
-        <div><span>料金</span><b>${esc(fmtFee(z) || '—')}</b></div>
-        <div><span>種類</span><b>${z.kind === 'ticket' ? 'チケット' : 'メーター'}</b></div>
-      </div>
-      ${week(z, t)}
-      <dl>
-        ${row('車種', vehicles(z))}
-        ${z.permitOnly ? row('注意', '標章車（障害者等用）専用の枠があります') : ''}
-        ${row('路線', z.route)}
-        ${row('区間', z.section)}
-        ${row('枠数', z.spaces != null ? `${z.spaces}台` + (z.truckSpaces ? `（うち貨物車 ${z.truckSpaces}台）` : '') : '')}
-        ${z.pref === '東京都' ? row('区間番号', z.id) : ''}
-        ${row('出典', z.source)}
-      </dl>
-      <div class="acts">
-        <a class="btn primary" href="https://www.google.com/maps/search/?api=1&query=${lat},${lng}" target="_blank" rel="noopener">Googleマップで開く</a>
-        <p class="route">経路：<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving" target="_blank" rel="noopener">Google</a><a href="https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d" target="_blank" rel="noopener">Apple</a></p>
-      </div>
-      <p class="warn">現地の標識・メーターの表示が優先されます。工事や行事で使えない場合もあります。</p>
+  const [srcTag, srcText] = sourceLabel(z);
+  const more = [
+    row('路線', z.route),
+    row('区間', z.section),
+    row('枠数', z.spaces != null ? `${z.spaces}台` + (z.truckSpaces ? `（うち貨物車 ${z.truckSpaces}台）` : '') : ''),
+    z.permitOnly ? row('枠', '標章車（障害者等用）専用の枠があります') : '',
+    z.pref === '東京都' ? row('区間番号', z.id) : '',
+  ].join('');
+  $('#dsheet').innerHTML = `
+    <div class="dhead">
+      <p class="dkick">${esc(kicker(z))}</p>
+      <div class="dtitle"><h2 id="dtitle">${esc(zoneName(z))}</h2><span>${esc(distText(d))}</span></div>
+    </div>
+    ${stateBlock(z, t)}
+    <div class="facts">
+      <div><span>最大</span><b>${esc(fmtLimit(z) || '—')}</b></div>
+      <div><span>料金</span><b>${esc(fmtFee(z) || '—')}</b></div>
+      <div><span>車種</span><b>${esc(vehicles(z))}</b></div>
+    </div>
+    ${hours(z, t)}
+    <p class="note">${I.info}<span>時間外は、ほとんどの区間で駐車禁止です。現地の標識・メーターの表示が優先されます。</span></p>
+    ${more ? `<div class="dmore"><h3>区間の情報</h3><dl>${more}</dl></div>` : ''}
+    <p class="src"><span class="badge off">${esc(srcTag)}</span><span>${esc(srcText)}</span></p>
+    <div class="dacts">
+      <a class="btn go big" href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving" target="_blank" rel="noopener">${I.go}Googleマップで経路を見る</a>
+      <a class="link" href="https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d" target="_blank" rel="noopener">Appleマップで開く</a>
     </div>`;
-  $('#sheetBody').scrollTop = 0;
-  $('#back').onclick = closeDetail;
-  if (fly) map.flyToBounds(L.latLngBounds(z.lines.flat()), { maxZoom: 17, duration: .5, ...pad() });
-  if (!z.addr) {
-    address(z)
-      .then(a => { if (state.sel === z.id) $('#dtitle').textContent = a || terms(z); })
-      .catch(() => { if (state.sel === z.id) $('#dtitle').textContent = terms(z); });
+  if (!z.addr && !addrCache.has(z.id)) {
+    address(z).then(a => { if (state.detail && state.sel === z.id && a) $('#dtitle').textContent = a; }).catch(() => {});
   }
+}
+
+function openDetail(z) {
+  if (!z) return;
+  showPanel(''); showWhen(false);
+  state.detail = true;
+  state.sel = z.id;
+  document.body.classList.add('in-detail');
+  $('#detail').hidden = false;
+  renderDetail(z);
+  $('#dsheet').scrollTop = 0;
+  draw();
+  map.flyToBounds(z.bounds, { maxZoom: 17, duration: .45, ...pad() });
+  $('#dback').focus({ preventScroll: true });
 }
 
 function closeDetail() {
-  state.sel = null;
-  setSheet('');
-  draw();
-  renderList();
+  state.detail = false;
+  $('#detail').hidden = true;
+  document.body.classList.remove('in-detail');
+  const id = state.sel;
+  if (state.dest) renderCards(); else renderCards(byId.get(id));
+  select(id, { scroll: false });
+  scrollToCard(id, false);
 }
 
-// スマホの一覧の高さ：''＝半分、'mid'＝詳細用、'full'＝ほぼ全部
-function setSheet(size) {
-  const sh = $('#sheet');
-  sh.classList.toggle('full', size === 'full');
-  sh.classList.toggle('mid', size === 'mid');
-  $('#grip').setAttribute('aria-expanded', size === 'full');
+/* ---------- 「ここへ行く」 ---------- */
+const isApple = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const navUrl = (kind, z) => {
+  const [lat, lng] = z.center;
+  return kind === 'apple'
+    ? `https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d`
+    : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+};
+const openNav = (kind, z) => window.open(navUrl(kind, z), '_blank', 'noopener');
+
+function startGo(z) {
+  if (!z) return;
+  const saved = load('pmm-nav', null);
+  if (saved === 'apple' || saved === 'google') { openNav(saved, z); return; }
+  // 所要時間の目安：直線距離×1.4 を時速20kmで
+  const from = state.here || origin();
+  const min = Math.max(1, Math.ceil(meters(from, z.center) * 1.4 / (CAR_KMH * 1000 / 60)));
+  const t = when();
+  const arrive = new Date(t.getTime() + min * 60000);
+  const s = status(z, t);
+  const b = s.a === 'ok' && !Zones.openNow(z, arrive, holidays.dates) ? { a: 'no', text: '着くころには時間外' } : s;
+  const navs = isApple() ? [['apple', 'Apple マップ'], ['google', 'Google マップ']] : [['google', 'Google マップ'], ['apple', 'Apple マップ']];
+  $('#goSheet').innerHTML = `
+    <h2 id="goTitle">${esc(zoneName(z))}へ案内します</h2>
+    <div class="goeta"><span>車で約${min}分 · ${esc(hmOf(arrive))}ごろ着</span>${badge(b)}</div>
+    <h3>どの地図で案内しますか</h3>
+    <div class="navs">${navs.map(([k, label]) => `<button class="nav" type="button" data-nav="${k}">${I.map}<span>${label}</span><span class="chev">${I.chev}</span></button>`).join('')}</div>
+    <label class="check"><input type="checkbox" id="navRemember" checked>次からはこの地図ですぐ開く</label>
+    <button class="cancel" type="button" id="goCancel">やめる</button>`;
+  $('#goScrim').hidden = false;
+  $('#goSheet').querySelector('.nav').focus();
+  $('#goSheet').onclick = e => {
+    const n = e.target.closest('[data-nav]');
+    if (n) {
+      if ($('#navRemember').checked) save('pmm-nav', n.dataset.nav);
+      closeGo();
+      openNav(n.dataset.nav, z);
+    } else if (e.target.closest('#goCancel')) closeGo();
+  };
+}
+function closeGo() { $('#goScrim').hidden = true; }
+
+/* ---------- タイマー ---------- */
+let timer = load('pmm-timer', null); // { zoneId, startedAt, limitMin, carLatLng, notified }
+let timerZone = null; // 止まっているときに出す区間
+
+const timerZoneOf = () => {
+  if (timer) return byId.get(timer.zoneId);
+  if (state.sel && byId.get(state.sel)) return byId.get(state.sel);
+  const o = state.here || origin();
+  return zones.reduce((b, z) => (!b || meters(o, z.center) < meters(o, b.center) ? z : b), null);
+};
+
+function openTimer() {
+  showPanel(''); showWhen(false);
+  timerZone = timerZoneOf();
+  renderTimer();
+  $('#timer').hidden = false;
+  $('#tclose').focus();
+}
+function closeTimer() { $('#timer').hidden = true; }
+
+function renderTimer() {
+  const z = timer ? byId.get(timer.zoneId) : timerZone;
+  const running = !!timer;
+  const notify = load('pmm-notify', false);
+  $('#timer').innerHTML = `
+    <div class="tin">
+      <button class="round tclose" id="tclose" type="button" aria-label="閉じる">${I.down}</button>
+      <div class="thead">
+        <span class="badge ${running ? 'ok' : 'off'}">${running ? '駐車中' : 'タイマー'}</span>
+        <h2>${esc(z ? zoneName(z) : '区間を選んでください')}</h2>
+        ${z ? `<p>${esc(kicker(z))}</p>` : ''}
+      </div>
+      <div class="ring" id="ring">
+        <svg viewBox="0 0 260 260" aria-hidden="true"><circle class="bg" cx="130" cy="130" r="122"/><circle class="fg" id="ringFg" cx="130" cy="130" r="122"/></svg>
+        <div class="rtext" id="rtext" aria-live="polite"></div>
+      </div>
+      <div class="tfacts">
+        <div><span>停めた時刻</span><b>${running ? esc(hmOf(new Date(timer.startedAt))) : '—'}</b></div>
+        <div><span>最大 · 料金</span><b>${z ? esc(`${fmtLimit(z) || '—'} · ${fmtFee(z) || '—'}`) : '—'}</b></div>
+      </div>
+      <div class="tnotify">
+        <label class="switch"><span>終わる10分前に知らせる</span><input type="checkbox" id="tnotify" role="switch"${notify ? ' checked' : ''}></label>
+        <small>ホーム画面に追加すると、画面を閉じていても届きます</small>
+      </div>
+      <div class="tbtns">
+        <button class="btn go" type="button" id="tstart"${running || !z ? ' disabled' : ''}>${I.play}スタート</button>
+        <button class="btn dark" type="button" id="tstop"${running ? '' : ' disabled'}>${I.stop}ストップ</button>
+      </div>
+      <button class="btn sub big" type="button" id="tcar"${running ? '' : ' disabled'}>${I.pin}車の場所を確認</button>
+      <p class="tfoot">メーター・チケットに表示された時刻が優先です</p>
+    </div>`;
+  updateTimer();
+}
+
+// 円と残り時間だけを書き換える（1秒ごと）
+function updateTimer() {
+  const fg = $('#ringFg');
+  if (!fg) return;
+  const C = 2 * Math.PI * 122;
+  const z = timer ? byId.get(timer.zoneId) : timerZone;
+  let frac = 1, html;
+  const over = !!timer && Date.now() >= timer.startedAt + timer.limitMin * 60000;
+  if (!timer) {
+    html = `<small>最大</small><b>${esc(z ? fmtMin(z.limitMin || 60) : '—')}</b>`;
+  } else if (over) {
+    frac = 0;
+    html = '<b>時間です</b>';
+  } else {
+    const end = timer.startedAt + timer.limitMin * 60000;
+    const left = end - Date.now();
+    frac = left / (timer.limitMin * 60000);
+    const m = fmtMin(Math.ceil(left / 60000));
+    html = `<small>あと</small><b class="${m.length > 3 ? 'long' : ''}">${esc(m)}</b><span>${esc(hmOf(new Date(end)))} まで</span>`;
+  }
+  fg.setAttribute('stroke-dasharray', C);
+  fg.setAttribute('stroke-dashoffset', C * (1 - Math.max(0, Math.min(1, frac))));
+  $('#ring').classList.toggle('over', over);
+  if ($('#rtext').innerHTML !== html) $('#rtext').innerHTML = html;
+}
+
+function startTimer() {
+  const z = timerZone;
+  if (!z) return;
+  timer = { zoneId: z.id, startedAt: Date.now(), limitMin: z.limitMin || 60, carLatLng: state.here || z.center, notified: false };
+  save('pmm-timer', timer);
+  if (load('pmm-notify', false)) askNotify();
+  renderTimer();
+  showTimerState();
+}
+function stopTimer() {
+  timerZone = timer ? byId.get(timer.zoneId) : timerZone;
+  timer = null;
+  save('pmm-timer', null);
+  renderTimer();
+  showTimerState();
+}
+function checkCar() {
+  if (!timer) return;
+  closeTimer();
+  if (state.detail) closeDetail();
+  state.moved = true;
+  showTimerState();
+  centerOn(timer.carLatLng, Math.max(map.getZoom(), 18), true);
+}
+// タイマーが動いているあいだは、ボタンに印を付け、車の場所に印を出す
+function showTimerState() {
+  $('#timerBtn').classList.toggle('on', !!timer);
+  if (carMark) { map.removeLayer(carMark); carMark = null; }
+  if (timer) {
+    carMark = L.marker(timer.carLatLng, {
+      icon: L.divIcon({ className: 'pm', html: `<div class="carm">${I.car}</div>`, iconSize: [0, 0] }),
+      zIndexOffset: 5500, keyboard: false, interactive: false,
+    }).addTo(map);
+  }
+}
+function askNotify() {
+  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch?.(() => {});
+}
+// 終わる10分前に1回だけ知らせる（許可がないときは画面の表示だけ）
+function tickTimer() {
+  if (!$('#timer').hidden) updateTimer();
+  if (!timer || timer.notified || !load('pmm-notify', false)) return;
+  const left = timer.startedAt + timer.limitMin * 60000 - Date.now();
+  if (left > 10 * 60000 || left <= 0) return;
+  timer.notified = true;
+  save('pmm-timer', timer);
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const z = byId.get(timer.zoneId);
+  try {
+    new Notification('パーキング・メーター・マップ', { body: `${z ? zoneName(z) : ''}：あと${Math.ceil(left / 60000)}分で時間です（${hmOf(new Date(timer.startedAt + timer.limitMin * 60000))}まで）`, icon: 'icon.svg' });
+  } catch (e) { /* 通知を出せない端末では画面の表示だけ */ }
 }
 
 /* ---------- いつ ---------- */
@@ -343,43 +720,50 @@ function fillWhen() {
     }
   });
   $('#whenDay').innerHTML = opts.map(([v, k]) => `<option value="${v}">${k}</option>`).join('');
-  let hours = '';
-  for (let h = 0; h < 24; h++) hours += `<option value="${h}">${h}:00</option>`;
-  $('#whenHour').innerHTML = hours;
+  let hrs = '';
+  for (let h = 0; h < 24; h++) hrs += `<option value="${h}">${h}:00</option>`;
+  $('#whenHour').innerHTML = hrs;
   $('#whenHour').value = String((today.getHours() + 1) % 24);
 }
-
-function setWhen(pick) {
-  $('#whenNow').setAttribute('aria-pressed', !pick);
-  $('#whenPick').setAttribute('aria-pressed', pick);
-  $('#whenSet').hidden = !pick;
-  if (pick) {
-    const t = new Date();
-    t.setDate(t.getDate() + +$('#whenDay').value);
-    t.setHours(+$('#whenHour').value, 0, 0, 0);
-    state.at = t;
-  } else state.at = null;
+function showWhen(open) {
+  $('#whenPop').hidden = !open;
+  $('#whenChip').setAttribute('aria-expanded', open);
+}
+function fromSelects() {
+  const t = new Date();
+  t.setDate(t.getDate() + +$('#whenDay').value);
+  t.setHours(+$('#whenHour').value, 0, 0, 0);
+  setAt(t, false);
+}
+// 日時を決める（null ならいま）。sync：日・時刻の選択欄もその日時に合わせる
+function setAt(t, sync = true) {
+  state.at = t;
+  if (t && sync) {
+    const a = new Date(); a.setHours(0, 0, 0, 0);
+    const b = new Date(t); b.setHours(0, 0, 0, 0);
+    const d = String(Math.round((b - a) / 864e5));
+    if ([...$('#whenDay').options].some(o => o.value === d)) $('#whenDay').value = d;
+    $('#whenHour').value = String(t.getHours());
+  }
   refresh();
 }
-
 function refresh() {
+  $('#whenText').textContent = whenLabel();
   draw();
-  const z = state.sel && zones.find(x => x.id === state.sel);
-  if (z) openDetail(z, false);
-  else renderList();
+  if (state.detail) { const z = byId.get(state.sel); if (z) renderDetail(z); } else renderCards();
 }
 
-/* ---------- 場所 ---------- */
-const PIN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
-const CLOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>';
+/* ---------- 行き先 ---------- */
 const AREA_RE = /^(東京都|大阪府|京都府|北海道|神奈川県)/;
+// 行き先の短い名前：都道府県と区市町村を省く（「東京都中央区銀座四丁目」→「銀座四丁目」）
+const shortName = title => {
+  const t = title.replace(/^(北海道|東京都|(?:大阪|京都)府|.{2,3}県)/, '') || title;
+  return t.replace(/^(.{1,6}?市.{1,4}?区|.{1,5}?[区市])(?=.)/, '') || t;
+};
 
-function recent() {
-  try { return JSON.parse(localStorage.getItem('pmm-recent')) || []; } catch (e) { return []; }
-}
+const recent = () => load('pmm-recent', []);
 function remember(h) {
-  const list = [h, ...recent().filter(x => x.title !== h.title)].slice(0, 5);
-  try { localStorage.setItem('pmm-recent', JSON.stringify(list)); } catch (e) {}
+  save('pmm-recent', [h, ...recent().filter(x => x.title !== h.title)].slice(0, 5));
 }
 const nearCount = p => zones.filter(z => meters(p, z.center) < NEAR_M).length;
 function count(list, k) {
@@ -397,7 +781,7 @@ function idlePanel() {
   const n = count(zones, 'pref');
   const areas = PREFS.filter(p => n[p]).map(p => `<button class="chip" type="button" data-pref="${p}">${prefName(p)}</button>`).join('');
   const rec = recent().map((h, i) =>
-    `<button type="button" class="qrow recent" data-recent="${i}">${CLOCK}<span class="qt"><b>${esc(h.title)}</b></span></button>`).join('');
+    `<button type="button" class="qrow" data-recent="${i}">${I.clock}<span class="qt"><b>${esc(h.title)}</b></span></button>`).join('');
   showPanel(`<h3>エリアへ移動</h3><div class="areas">${areas}</div>${rec ? `<h3>最近</h3>${rec}` : ''}`);
 }
 
@@ -412,33 +796,70 @@ async function search(q) {
       .map(h => ({ title: h.properties.title, lat: h.geometry.coordinates[1], lng: h.geometry.coordinates[0] }));
     hits = [...all.filter(h => AREA_RE.test(h.title)), ...all.filter(h => !AREA_RE.test(h.title))].slice(0, 6);
     if (!hits.length) { showPanel(`<p class="qmsg">「${esc(q)}」は見つかりませんでした</p>`); return; }
-    if (hits.length === 1) { goTo(hits[0]); return; }
+    if (hits.length === 1) { setDest(hits[0]); return; }
     showPanel(hits.map((h, i) => {
       const [, pref, rest] = h.title.match(/^(北海道|東京都|(?:大阪|京都)府|.{2,3}県)?(.*)$/);
-      return `<button type="button" class="qrow" data-hit="${i}">${PIN}<span class="qt"><b>${esc(rest || h.title)}</b>${pref ? `<span>${esc(pref)}</span>` : ''}</span><span class="qn">${nearCount([h.lat, h.lng])}区間</span></button>`;
+      return `<button type="button" class="qrow" data-hit="${i}">${I.pin}<span class="qt"><b>${esc(rest || h.title)}</b>${pref ? `<span>${esc(pref)}</span>` : ''}</span><span class="qn">${nearCount([h.lat, h.lng])}区間</span></button>`;
     }).join(''));
   } catch (e) {
     showPanel('<p class="qmsg">地名検索につながりませんでした</p>');
   }
 }
 
-function goTo(h) {
+// 行き先モード：行き先の印、半径400mの円、距離は行き先から測る
+function setDest(h) {
   remember(h);
   showPanel('');
-  $('#q').value = h.title;
-  $('#q').blur();
+  if (!state.dest) state.prevView = { c: map.getCenter(), z: map.getZoom() };
+  state.dest = { name: shortName(h.title), title: h.title, lat: h.lat, lng: h.lng };
+  state.sel = null;
   state.moved = true;
-  if (state.sel) { state.sel = null; setSheet(''); }
-  if (placeMark) map.removeLayer(placeMark);
-  placeMark = L.circleMarker([h.lat, h.lng], { pane: 'marks', radius: 7, color: '#fff', weight: 3, fillColor: '#D1452E', fillOpacity: 1 })
-    .bindTooltip(esc(h.title)).addTo(map);
+  $('#q').value = state.dest.name;
+  $('#q').blur();
+  destUi();
+  drawDest();
   centerOn([h.lat, h.lng], 16);
-  draw();
+  renderCards();
+}
+function clearDest(back) {
+  const prev = state.prevView;
+  state.dest = null;
+  state.prevView = null;
+  state.sel = null;
+  $('#q').value = '';
+  destUi();
+  drawDest();
+  if (back && prev) map.setView(prev.c, prev.z, { animate: false });
+  renderCards();
+}
+function destUi() {
+  const on = !!state.dest;
+  $('#qform').classList.toggle('dest', on);
+  $('#qback').hidden = !on;
+  $('#qicon').style.display = on ? 'none' : '';
+  $('#qclear').hidden = !on;
+}
+function drawDest() {
+  marks.clearLayers();
+  const d = state.dest;
+  if (!d) return;
+  const ink = colors().ink;
+  L.circle([d.lat, d.lng], { radius: DEST_R, color: ink, weight: 2, opacity: .7, dashArray: '6 8', fill: true, fillColor: ink, fillOpacity: .04, interactive: false }).addTo(marks);
+  // 円の上に「徒歩5分」
+  L.marker([d.lat + DEST_R / 111320, d.lng], {
+    icon: L.divIcon({ className: 'pm', html: `<span class="rtag">徒歩${walkMin(DEST_R)}分</span>`, iconSize: [0, 0] }),
+    interactive: false, keyboard: false, zIndexOffset: 5800,
+  }).addTo(marks);
+  L.marker([d.lat, d.lng], {
+    icon: L.divIcon({ className: 'pm', html: `<div class="destm"><i>${I.flag}</i><span>${esc(d.name)}</span></div>`, iconSize: [0, 0] }),
+    interactive: false, keyboard: false, zIndexOffset: 6000,
+  }).addTo(marks);
 }
 
 function fitPref(pref) {
   showPanel('');
   state.moved = true;
+  if (state.dest) clearDest(false);
   const pts = zones.filter(z => z.pref === pref).flatMap(z => z.lines.flat());
   if (pts.length) map.fitBounds(L.latLngBounds(pts), { animate: false, ...pad() });
 }
@@ -447,7 +868,12 @@ function fitPref(pref) {
 function showHere(p) {
   state.here = [p.coords.latitude, p.coords.longitude];
   if (hereMark) hereMark.setLatLng(state.here);
-  else hereMark = L.circleMarker(state.here, { pane: 'marks', radius: 9, color: '#fff', weight: 3, fillColor: '#1F63C6', fillOpacity: 1 }).addTo(map);
+  else {
+    hereMark = L.marker(state.here, {
+      icon: L.divIcon({ className: 'pm', html: '<div class="here"></div>', iconSize: [0, 0] }),
+      zIndexOffset: 5000, keyboard: false, interactive: false,
+    }).addTo(map);
+  }
 }
 function watchHere() {
   if (!navigator.geolocation) return;
@@ -462,32 +888,62 @@ function watchHere() {
 /* ---------- 組み立て ---------- */
 function bind() {
   $('#qform').addEventListener('submit', e => { e.preventDefault(); $('#q').blur(); search($('#q').value); });
-  $('#q').addEventListener('focus', () => { $('#q').select(); if (!$('#q').value.trim()) idlePanel(); });
+  $('#q').addEventListener('focus', () => { $('#q').select(); showWhen(false); if (!$('#q').value.trim() || state.dest) idlePanel(); });
   $('#q').addEventListener('input', () => { if (!$('#q').value.trim()) idlePanel(); else showPanel(''); });
+  $('#qback').addEventListener('click', () => clearDest(true));
+  $('#qclear').addEventListener('click', () => clearDest(false));
   $('#qpanel').addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;
-    if (b.dataset.hit) goTo(hits[+b.dataset.hit]);
-    else if (b.dataset.recent) goTo(recent()[+b.dataset.recent]);
+    if (b.dataset.hit) setDest(hits[+b.dataset.hit]);
+    else if (b.dataset.recent) setDest(recent()[+b.dataset.recent]);
     else if (b.dataset.pref) fitPref(b.dataset.pref);
   });
   document.addEventListener('click', e => {
-    if (!$('#qpanel').hidden && !e.target.closest('.topbar')) showPanel('');
+    if (e.target.closest('.top')) return;
+    if (!$('#qpanel').hidden) showPanel('');
+    showWhen(false);
   });
 
-  $('#whenNow').addEventListener('click', () => setWhen(false));
-  $('#whenPick').addEventListener('click', () => setWhen(true));
-  $('#whenDay').addEventListener('change', () => setWhen(true));
-  $('#whenHour').addEventListener('change', () => setWhen(true));
-
-  $('#sheetBody').addEventListener('click', e => {
-    const b = e.target.closest('.row');
-    if (b) openDetail(zones.find(z => z.id === b.dataset.id));
+  $('#whenChip').addEventListener('click', () => { showPanel(''); showWhen($('#whenPop').hidden); });
+  $('#whenDay').addEventListener('change', fromSelects);
+  $('#whenHour').addEventListener('change', fromSelects);
+  $('#whenNow').addEventListener('click', () => { showWhen(false); setAt(null); });
+  $('#greenChip').addEventListener('click', () => {
+    state.green = !state.green;
+    $('#greenChip').setAttribute('aria-pressed', state.green);
+    draw();
+    if (!state.detail) renderCards();
   });
-  $('#grip').addEventListener('click', () => setSheet($('#sheet').classList.contains('full') ? (state.sel ? 'mid' : '') : 'full'));
 
+  $('#track').addEventListener('click', onCardClick);
+  $('#track').addEventListener('scroll', onTrackScroll, { passive: true });
+  $('#track').addEventListener('keydown', e => {
+    const c = e.target.closest('.card[data-id]');
+    if (c && e.target === c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); select(c.dataset.id, { pan: true }); }
+  });
+  $('#dback').addEventListener('click', closeDetail);
+  $('#goScrim').addEventListener('click', e => { if (e.target === $('#goScrim')) closeGo(); });
+
+  $('#timerBtn').addEventListener('click', openTimer);
+  $('#timer').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.id === 'tclose') closeTimer();
+    else if (b.id === 'tstart') startTimer();
+    else if (b.id === 'tstop') stopTimer();
+    else if (b.id === 'tcar') checkCar();
+  });
+  $('#timer').addEventListener('change', e => {
+    if (e.target.id !== 'tnotify') return;
+    save('pmm-notify', e.target.checked);
+    if (e.target.checked) askNotify();
+  });
+
+  $('#baseBtn').addEventListener('click', toggleBase);
   $('#locate').addEventListener('click', () => {
     if (!navigator.geolocation) return alert('この端末では現在地を使えません');
+    if (state.dest) clearDest(false);
     if (state.here) centerOn(state.here, Math.max(map.getZoom(), 16));
     navigator.geolocation.getCurrentPosition(p => { showHere(p); centerOn(state.here, Math.max(map.getZoom(), 16)); },
       () => alert('現在地を取得できませんでした。位置情報の許可を確かめてください'), { enableHighAccuracy: true, timeout: 15000 });
@@ -495,28 +951,41 @@ function bind() {
 
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
-    if (!$('#qpanel').hidden) showPanel('');
-    else if (state.sel) closeDetail();
+    if (!$('#goScrim').hidden) closeGo();
+    else if (!$('#timer').hidden) closeTimer();
+    else if (!$('#qpanel').hidden) showPanel('');
+    else if (!$('#whenPop').hidden) showWhen(false);
+    else if (state.detail) closeDetail();
   });
+
+  // カードの高さに合わせて、右下のボタンの位置を決める
+  if (window.ResizeObserver) {
+    new ResizeObserver(() => document.documentElement.style.setProperty('--cards-h', `${$('#cards').offsetHeight}px`)).observe($('#cards'));
+  }
   // 「いま」は時間が進むと変わるので、1分ごとに見直す
   setInterval(() => { if (!state.at) refresh(); }, 60000);
+  setInterval(tickTimer, 1000);
 }
 
 async function boot() {
   initMap();
   bind();
   fillWhen();
+  $('#whenText').textContent = whenLabel();
   try {
     zones = Zones.normalize(await (await fetch('data/zones.geojson', { cache: 'no-cache' })).json());
   } catch (e) {
     $('#empty').hidden = false;
     return;
   }
+  zones.forEach(z => { z.bounds = L.latLngBounds(z.lines.flat()); });
+  byId = new Map(zones.map(z => [z.id, z]));
   try {
     holidays = await (await fetch('data/holidays.json', { cache: 'no-cache' })).json();
   } catch (e) { /* 祝日一覧がなくても動く（祝日を判定しないだけ） */ }
-  draw();
-  renderList();
+  if (timer && !byId.get(timer.zoneId)) { timer = null; save('pmm-timer', null); }
+  showTimerState();
+  renderCards();
   watchHere();
 }
 

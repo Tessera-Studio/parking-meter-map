@@ -8,6 +8,7 @@
 
 画面は1つだけです。「この辺で、いつ停められるか」だけに答えます。
 
+- **地図**：ふだんは色の少ないシンプルな地図（国土地理院の淡色地図）。右上のボタンで詳しい地図（OpenStreetMap）に切り替えられます
 - **開いたとき**：現在地のまわり（位置情報が使えないときは銀座、2回目からは前回見ていた場所）を、道が分かる大きさで出します
 - **地図の線**：**緑＝停められる／灰＝停められない（時間外）／灰の破線＝時間が公開されていない（神奈川など）**。区間はいつも全部出し、色だけが変わります。引いた地図では線の代わりに点で出します
 - **いつ**：上の「いま」と「日時を指定」（きょう・あす・次の土曜・日曜 × 0〜23時）。「いま」は1分ごとに見直します。曜日・祝日・正月・札幌の冬期休止まで見ます（祝日は `data/holidays.json`）
@@ -111,7 +112,7 @@ index.html        画面
 app.js            アプリ本体（Leaflet）
 zones.js          GeoJSON をアプリの形にそろえる
 styles.css        スタイル（ライト／ダーク対応）
-config.js         地図タイル（CARTO）の鍵。空なら OpenStreetMap
+config.js         地図タイル（CARTO）の鍵。空なら国土地理院の淡色地図
 data/zones.geojson  752区間（build/build.py が作る）
 data/holidays.json  祝日一覧（「いま使える」の判定に使う）
 build/            データを作るスクリプトと元データ
@@ -126,9 +127,14 @@ vendor/           Leaflet 1.9.4
 
 ## 地図の下地について
 
-`config.js` の `cartoApiKey` が空のときは OpenStreetMap のタイルを使います（明るい配色のみ）。
-[carto.com/basemaps/apikey](https://carto.com/basemaps/apikey/) で公開ドメイン用の無料の鍵を取って入れると、
-ダークテーマに追従する CARTO のタイルに切り替わります。
+地図の右上のボタンで2つを切り替えられます（選んだほうを次回も使います）。
+
+- **シンプル**（ふだん）：[国土地理院の淡色地図](https://maps.gsi.go.jp/development/ichiran.html)。色が少なく、区間の線が目立ちます。鍵は不要です
+- **詳しい地図**：OpenStreetMap の標準のタイル
+
+ダークテーマでは、下地の色を反転して暗くします。
+`config.js` の `cartoApiKey` に [carto.com/basemaps/apikey](https://carto.com/basemaps/apikey/) で取った公開ドメイン用の無料の鍵を入れると、
+シンプルは CARTO のタイル（ダークテーマ用の暗い地図あり）に替わります。
 
 ## 出典
 
@@ -138,7 +144,7 @@ vendor/           Leaflet 1.9.4
 - 区間データ（神奈川） — 神奈川県警察 パーキング・メーター等の設置場所。線は OpenStreetMap（ODbL）から作成
 - 地名検索・住所の逆引き — [国土地理院](https://www.gsi.go.jp/)
 - 祝日 — [内閣府「国民の祝日」](https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html)
-- 地図タイル — OpenStreetMap contributors / CARTO
+- 地図タイル — 国土地理院（地理院タイル）／ OpenStreetMap contributors ／ CARTO
 
 ## ライセンス
 
