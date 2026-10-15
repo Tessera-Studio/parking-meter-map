@@ -10,28 +10,11 @@ const WALK_M_MIN = 80; // 徒歩1分の距離
 const DEST_R = 400;    // 行き先のまわりに描く円（徒歩5分）
 const CAR_KMH = 20;    // 「ここへ行く」の所要時間の目安（直線距離×1.4 をこの速さで）
 
-// 地図の下地は2つ。ふだんは色の少ない「シンプル」（国土地理院の淡色地図）、切り替えで「詳しい」（OpenStreetMap）
-// config.js に CARTO の鍵があれば、シンプルは CARTO（ダークテーマにも合わせる）にする
-const CARTO_KEY = (window.PAWMAP_CONFIG || {}).cartoApiKey || '';
-const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
-const BASES = {
-  simple: CARTO_KEY ? {
-    light: `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`,
-    dark:  `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`,
-    attr: `${OSM_ATTR} &copy; <a href="https://carto.com/attributions">CARTO</a>`,
-    subdomains: 'abcd', maxNativeZoom: 20,
-  } : {
-    light: 'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
-    dark:  'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
-    attr: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>',
-    subdomains: 'abc', maxNativeZoom: 18,
-  },
-  detail: {
-    light: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    dark:  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attr: OSM_ATTR,
-    subdomains: 'abc', maxNativeZoom: 19,
-  },
+// 地図の下地は basemap.js のベクトル地図（ふだんは「シンプル」、切り替えで「詳しい」）。
+// WebGL が使えない・地図が読めないときだけ、国土地理院の淡色地図（画像）にする
+const GSI_PALE = {
+  url: 'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
+  attr: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>',
 };
 const SRC_ATTR = '区間データ：<a href="https://parking-meter.jp/" target="_blank" rel="noopener">警視庁</a>（<a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener">CC BY 4.0</a>）・<a href="https://www.police.pref.osaka.lg.jp/kotsu/tyusya/1/1/index.html" target="_blank" rel="noopener">大阪府警察</a>・神奈川県警察・北海道警察・京都府警察（線は OpenStreetMap から作成）';
 const PREFS = ['北海道', '東京都', '神奈川県', '京都府', '大阪府'];
@@ -146,18 +129,35 @@ const narrow = () => window.innerWidth <= 760;
 let baseKind = 'simple';
 try { baseKind = localStorage.getItem('pmm-base') === 'detail' ? 'detail' : 'simple'; } catch (e) {}
 
+let useVector = true;
 function setTiles() {
-  const base = BASES[baseKind];
   if (tiles) map.removeLayer(tiles);
-  tiles = L.tileLayer(darkQ.matches ? base.dark : base.light, {
-    attribution: base.attr, subdomains: base.subdomains,
-    maxNativeZoom: base.maxNativeZoom, maxZoom: 21, detectRetina: true,
-  }).addTo(map);
-  // ダークテーマで明るい下地しかないときは、色を反転して暗くする（区間の線は別の層なのでそのまま）
-  document.body.classList.toggle('dim-tiles', darkQ.matches && !(baseKind === 'simple' && CARTO_KEY));
+  map.attributionControl.removeAttribution(Basemap.ATTR);
+  const dark = darkQ.matches;
+  if (useVector && Basemap.supported()) {
+    tiles = L.maplibreGL({ style: Basemap.style(dark, baseKind === 'detail'), interactive: false, attributionControl: false });
+    tiles.addTo(map);
+    map.attributionControl.addAttribution(Basemap.ATTR);
+    watchVector(tiles);
+  } else {
+    tiles = L.tileLayer(GSI_PALE.url, { attribution: GSI_PALE.attr, maxNativeZoom: 18, maxZoom: 21, detectRetina: true }).addTo(map);
+  }
+  // 画像の地図しかないダークテーマでは、色を反転して暗くする（区間の線は別の層なのでそのまま）
+  document.body.classList.toggle('dim-tiles', dark && !(tiles instanceof L.MaplibreGL));
+  $('#map').style.background = dark ? '#18191B' : '#F2F1EE';
   const b = $('#baseBtn');
   b.setAttribute('aria-pressed', baseKind === 'detail');
   b.setAttribute('aria-label', `地図の表示を切り替え（いまは${baseKind === 'detail' ? '詳しい地図' : 'シンプル'}）`);
+}
+// ベクトル地図が1枚も読めないうちに失敗したら（または8秒たっても読めなければ）、画像の地図に切り替える
+function watchVector(t) {
+  const gl = t.getMaplibreMap();
+  if (!gl) return;
+  let ok = false;
+  const fail = () => { if (!ok && tiles === t && useVector) { useVector = false; setTiles(); } };
+  gl.on('sourcedata', e => { if (e.tile) ok = true; });
+  gl.on('error', fail);
+  setTimeout(fail, 8000);
 }
 function toggleBase() {
   baseKind = baseKind === 'detail' ? 'simple' : 'detail';
