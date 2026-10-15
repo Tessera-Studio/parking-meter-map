@@ -59,6 +59,9 @@ const I = {
   pin: svg('<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'),
   flag: svg('<path d="M6 21V4M6 4h11l-2.5 4L17 12H6"/>'),
   map: svg('<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/>'),
+  timer: svg('<circle cx="12" cy="13" r="8"/><path d="M12 13l3-3M9.5 2.5h5"/>'),
+  yen: svg('<circle cx="12" cy="12" r="9"/><path d="M8.5 7.5L12 12l3.5-4.5M12 12v5M9 12.5h6M9 15h6"/>'),
+  warn: svg('<path d="M12 4L2.5 20h19z"/><path d="M12 10v4M12 17h.01"/>'),
   info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'),
   chev: svg('<path d="M9 6l6 6-6 6"/>'),
   down: svg('<path d="M6 9l6 6 6-6"/>'),
@@ -301,25 +304,27 @@ function computeRows(extra) {
   return list;
 }
 
-// カードの「時間」：利用時間と、使えない曜日をひとことで
-function hoursShort(z) {
-  if (z.days === 'unknown' || !z.span) return { v: '現地で確認', note: '' };
-  const r = z.rules.join(' ');
-  return { v: z.hours, note: /土/.test(r) ? '土日祝は休み' : /日曜|休日/.test(r) ? '日祝は休み' : z.months ? '冬期は休み' : '' };
-}
+// カードの注意書き：使えない曜日・期間（制限事項をそのまま）。時間が公開されていない区間はその旨
+const cautions = z => (z.days === 'unknown' || !z.span ? ['時間・曜日は現地の標識で確認'] : z.rules.filter(Boolean));
 
 function cardHtml(r, i, n) {
   const { z, d, s } = r;
-  const h = hoursShort(z);
+  const unk = z.days === 'unknown' || !z.span;
+  const fact = (icon, v, k) => `<div>${icon}<b>${esc(v)}</b><span>${k}</span></div>`;
   return `
     <article class="card ${s.a === 'ok' ? 'ok' : 'off'}${z.id === state.sel ? ' sel' : ''}" data-id="${esc(z.id)}" tabindex="0" aria-label="${esc(`${zoneName(z)}、${s.text}`)}">
-      <div class="chead">${badge(s)}<span class="cnum">${i + 1} / ${n}</span></div>
-      <div class="crow"><span class="cname">${esc(zoneName(z))}</span><span class="cdist">${esc(distText(d))}</span></div>
-      <div class="cfacts">
-        <div><span>最大</span><b>${esc(fmtLimit(z) || '—')}</b></div>
-        <div><span>料金</span><b>${esc(fmtFee(z) || '—')}</b></div>
-        <div class="ctime"><span>時間${h.note ? `<i>${esc(h.note)}</i>` : ''}</span><b>${esc(h.v)}</b></div>
+      <div class="chead">
+        <i class="cp" aria-hidden="true">P</i>
+        <span class="cname">${esc(zoneName(z))}</span>
+        ${badge(s)}
       </div>
+      <div class="csub"><span>${esc(KIND[z.kind])} · ${esc(distText(d))}</span><span class="cnum">${i + 1} / ${n}</span></div>
+      <div class="cfacts">
+        ${fact(I.clock, unk ? '現地で確認' : z.hours, '利用時間')}
+        ${fact(I.timer, fmtLimit(z) || '—', '最大')}
+        ${fact(I.yen, fmtFee(z) || '—', '料金')}
+      </div>
+      ${cautions(z).map(c => `<p class="cwarn">${I.warn}<span>${esc(c)}</span></p>`).join('')}
       <div class="cbtns">
         <button class="btn big ${s.a === 'ok' ? 'go' : 'dark'}" type="button" data-act="go">${I.go}ここへ行く</button>
         <button class="btn sub" type="button" data-act="detail">詳細</button>
