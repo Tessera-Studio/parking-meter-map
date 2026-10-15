@@ -198,7 +198,11 @@ function pad() {
 }
 
 function initMap() {
-  const start = load('pmm-last', null) || { c: GINZA, z: 16 };
+  // 最初に見せる場所：最近（30分以内）の現在地 → 前回見ていた場所 → 銀座。開いたらすぐ現在地を取り直す（locateOnOpen）
+  const here = load('pmm-here', null);
+  const fresh = here && Date.now() - here.t < 30 * 60000;
+  startHere = fresh ? here.c : null;
+  const start = fresh ? { c: here.c, z: 16 } : load('pmm-last', null) || { c: GINZA, z: 16 };
   map = L.map('map', { center: start.c, zoom: start.z, zoomControl: false, minZoom: 6, maxZoom: 21, preferCanvas: true });
   L.control.zoom({ position: 'bottomright' }).addTo(map);
   map.attributionControl.setPosition('bottomright');
@@ -877,14 +881,22 @@ function showHere(p) {
     }).addTo(map);
   }
 }
-function watchHere() {
+// 開いたら現在地を中心にする。まず早い（おおまかな）位置で寄せ、あとから届く正確な位置が
+// 150m以上ずれていれば、開いてから30秒のあいだだけ寄せ直す。人が地図を動かしたら、それ以降は勝手に動かさない
+let autoCenterUntil = 0, autoCentered = null, startHere = null;
+function onFix(p) {
+  showHere(p);
+  save('pmm-here', { c: state.here, t: Date.now() });
+  if (state.moved || Date.now() > autoCenterUntil) return;
+  if (autoCentered && meters(autoCentered, state.here) < 150) return;
+  autoCentered = state.here;
+  centerOn(state.here, Math.max(map.getZoom(), 16));
+}
+function locateOnOpen() {
   if (!navigator.geolocation) return;
-  navigator.geolocation.watchPosition(p => {
-    const first = !state.here;
-    showHere(p);
-    // 最初の1回だけ、まだ地図を触っていなければ現在地の周りを見せる
-    if (first && !state.moved) centerOn(state.here, 16);
-  }, () => {}, { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 });
+  autoCenterUntil = Date.now() + 30000;
+  navigator.geolocation.getCurrentPosition(onFix, () => {}, { enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 });
+  navigator.geolocation.watchPosition(onFix, () => {}, { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 });
 }
 
 /* ---------- 組み立て ---------- */
@@ -963,6 +975,7 @@ function bind() {
 async function boot() {
   initMap();
   bind();
+  locateOnOpen(); // 区間データを読み込むのを待たずに、すぐ現在地を取りにいく
   try {
     zones = Zones.normalize(await (await fetch('data/zones.geojson', { cache: 'no-cache' })).json());
   } catch (e) {
@@ -977,7 +990,9 @@ async function boot() {
   if (timer && !byId.get(timer.zoneId)) { timer = null; save('pmm-timer', null); }
   showTimerState();
   renderCards();
-  watchHere();
+  // カードが出て見えている範囲が変わったので、現在地へ寄せ直す（まだ地図を触っていなければ）
+  const target = autoCentered || startHere;
+  if (target && !state.moved) centerOn(target, map.getZoom());
 }
 
 boot();
