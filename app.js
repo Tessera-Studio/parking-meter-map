@@ -505,6 +505,7 @@ function renderDetail(z) {
   ].join('');
   $('#dsheet').innerHTML = `
     <div class="dhead">
+      <button class="dclose" type="button" data-close aria-label="閉じる">${svg('<path d="M6 6l12 12M18 6L6 18"/>')}</button>
       <p class="dkick">${esc(kicker(z))}</p>
       <div class="dtitle"><h2 id="dtitle">${esc(zoneName(z))}</h2><span>${esc(distText(d))}</span></div>
     </div>
@@ -518,10 +519,7 @@ function renderDetail(z) {
     <p class="note">${I.info}<span>時間外は、ほとんどの区間で駐車禁止です。現地の標識・メーターの表示が優先されます。</span></p>
     ${more ? `<div class="dmore"><h3>区間の情報</h3><dl>${more}</dl></div>` : ''}
     <p class="src"><span class="badge off">${esc(srcTag)}</span><span>${esc(srcText)}</span></p>
-    <div class="dacts">
-      <a class="btn go big" href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving" target="_blank" rel="noopener">${I.go}Googleマップで経路を見る</a>
-      <a class="link" href="https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d" target="_blank" rel="noopener">Appleマップで開く</a>
-    </div>`;
+    <div class="dacts"><h3>地図アプリで経路を見る</h3>${navRows(z, true)}</div>`;
   if (!z.addr && !addrCache.has(z.id)) {
     address(z).then(a => { if (state.detail && state.sel === z.id && a) $('#dtitle').textContent = a; }).catch(() => {});
   }
@@ -530,6 +528,8 @@ function renderDetail(z) {
 function openDetail(z) {
   if (!z) return;
   showPanel('');
+  // 端末の「戻る」（Android の戻るボタン・iPhone のスワイプ）でも閉じられるよう、履歴を1つ積む
+  if (!state.detail) { try { history.pushState({ pmm: 'detail' }, ''); } catch (e) {} }
   state.detail = true;
   state.sel = z.id;
   document.body.classList.add('in-detail');
@@ -541,7 +541,13 @@ function openDetail(z) {
   $('#dback').focus({ preventScroll: true });
 }
 
+// 詳細を閉じる。積んだ履歴が残っていれば「戻る」で閉じる（popstate から closeDetail が呼ばれる）
+function leaveDetail() {
+  if (history.state && history.state.pmm === 'detail') history.back();
+  else closeDetail();
+}
 function closeDetail() {
+  if (!state.detail) return;
   state.detail = false;
   $('#detail').hidden = true;
   document.body.classList.remove('in-detail');
@@ -559,6 +565,15 @@ const navUrl = (kind, z) => {
     ? `https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d`
     : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
 };
+// 地図アプリの2行（Apple・Google を同じ大きさで）。「ここへ行く」のシートと詳細で共通。
+// link：詳細ではそのまま開くリンクにする（シートではボタンにして、選んだ地図を覚える）
+const NAVS = () => (isApple() ? [['apple', 'Apple マップ'], ['google', 'Google マップ']] : [['google', 'Google マップ'], ['apple', 'Apple マップ']]);
+const navRows = (z, link) => `<div class="navs">${NAVS().map(([k, label]) => {
+  const inner = `${I.map}<span>${label}</span><span class="chev">${I.chev}</span>`;
+  return link
+    ? `<a class="nav" href="${navUrl(k, z)}" target="_blank" rel="noopener">${inner}</a>`
+    : `<button class="nav" type="button" data-nav="${k}">${inner}</button>`;
+}).join('')}</div>`;
 const openNav = (kind, z) => window.open(navUrl(kind, z), '_blank', 'noopener');
 
 function startGo(z) {
@@ -572,12 +587,11 @@ function startGo(z) {
   const arrive = new Date(t.getTime() + min * 60000);
   const s = status(z, t);
   const b = s.a === 'ok' && !Zones.openNow(z, arrive, holidays.dates) ? { a: 'no', text: '着くころには時間外' } : s;
-  const navs = isApple() ? [['apple', 'Apple マップ'], ['google', 'Google マップ']] : [['google', 'Google マップ'], ['apple', 'Apple マップ']];
   $('#goSheet').innerHTML = `
     <h2 id="goTitle">${esc(zoneName(z))}へ案内します</h2>
     <div class="goeta"><span>車で約${min}分 · ${esc(hmOf(arrive))}ごろ着</span>${badge(b)}</div>
     <h3>どの地図で案内しますか</h3>
-    <div class="navs">${navs.map(([k, label]) => `<button class="nav" type="button" data-nav="${k}">${I.map}<span>${label}</span><span class="chev">${I.chev}</span></button>`).join('')}</div>
+    ${navRows(z, false)}
     <label class="check"><input type="checkbox" id="navRemember" checked>次からはこの地図ですぐ開く</label>
     <button class="cancel" type="button" id="goCancel">やめる</button>`;
   $('#goScrim').hidden = false;
@@ -692,7 +706,7 @@ function stopTimer() {
 function checkCar() {
   if (!timer) return;
   closeTimer();
-  if (state.detail) closeDetail();
+  if (state.detail) leaveDetail();
   state.moved = true;
   showTimerState();
   centerOn(timer.carLatLng, Math.max(map.getZoom(), 18), true);
@@ -891,7 +905,9 @@ function bind() {
     const c = e.target.closest('.card[data-id]');
     if (c && e.target === c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); select(c.dataset.id, { pan: true }); }
   });
-  $('#dback').addEventListener('click', closeDetail);
+  $('#dback').addEventListener('click', leaveDetail);
+  $('#dsheet').addEventListener('click', e => { if (e.target.closest('[data-close]')) leaveDetail(); });
+  window.addEventListener('popstate', () => { if (state.detail) closeDetail(); });
   $('#goScrim').addEventListener('click', e => { if (e.target === $('#goScrim')) closeGo(); });
 
   $('#timerBtn').addEventListener('click', openTimer);
@@ -923,7 +939,7 @@ function bind() {
     if (!$('#goScrim').hidden) closeGo();
     else if (!$('#timer').hidden) closeTimer();
     else if (!$('#qpanel').hidden) showPanel('');
-    else if (state.detail) closeDetail();
+    else if (state.detail) leaveDetail();
   });
 
   // カードの高さに合わせて、右下のボタンの位置を決める

@@ -130,7 +130,7 @@ body.dim-tiles .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness
 .csub span:first-child{overflow:hidden;text-overflow:ellipsis}
 .cnum{flex:none}
 .card.no .cname,.card.unk .cname{color:var(--ink-2)}
-.cbtns{display:grid;grid-template-columns:1fr 72px;gap:8px;margin-top:2px}
+.cbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
 .cbtns .btn{height:44px;padding:0 10px}
 .btn.inkbtn{background:var(--ink);color:var(--surface)}
 .badge{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border-radius:var(--r-badge);font-size:13px;font-weight:700;white-space:nowrap}
@@ -174,7 +174,10 @@ body.dim-tiles .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness
 .detail > *{pointer-events:auto}
 .dback{position:absolute;z-index:2;top:calc(12px + env(safe-area-inset-top));left:16px}
 .dsheet{position:absolute;left:0;right:0;bottom:0;top:calc(236px + env(safe-area-inset-top));overflow-y:auto;overscroll-behavior:contain;background:var(--surface);border-radius:24px 24px 0 0;box-shadow:0 -4px 18px rgba(0,0,0,.12);padding:22px 20px calc(24px + env(safe-area-inset-bottom));display:grid;gap:16px;align-content:start}
-.dhead{display:grid;gap:2px}
+.dhead{position:relative;display:grid;gap:2px;padding-right:44px}
+/* 詳細を閉じる「×」（左上の「戻る」と同じ働き） */
+.dclose{position:absolute;top:-6px;right:-6px;width:40px;height:40px;border:0;border-radius:50%;background:var(--chip-2);color:var(--ink);display:grid;place-items:center;padding:0}
+.dclose svg{width:20px;height:20px}
 .dkick{margin:0;font-size:13px;color:var(--muted)}
 .dtitle{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 12px}
 .dtitle h2{margin:0;font-size:28px;font-weight:700;line-height:1.2;min-width:0;overflow-wrap:anywhere}
@@ -204,9 +207,8 @@ body.dim-tiles .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness
 .dmore dd{margin:0;overflow-wrap:anywhere}
 .src{margin:0;display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--muted)}
 .src .badge{height:22px;font-size:12px}
-.dacts{display:grid;gap:10px;justify-items:center}
-.dacts .btn.go{width:100%}
-.dacts a.link{font-size:14px;font-weight:700;color:var(--ink-2)}
+.dacts{display:grid;gap:8px}
+.dacts h3{margin:0;font-size:13px;font-weight:700;color:var(--muted)}
 
 /* ---------- 「ここへ行く」のシート ---------- */
 .scrim{position:fixed;inset:0;z-index:1400;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
@@ -215,7 +217,7 @@ body.dim-tiles .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness
 .goeta{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;font-size:15px;color:var(--ink-2)}
 .gosheet h3{margin:4px 0 0;font-size:13px;font-weight:700;color:var(--muted)}
 .navs{display:grid;gap:8px}
-.nav{display:flex;align-items:center;gap:14px;width:100%;height:58px;padding:0 16px;border:0;border-radius:14px;background:var(--surface-2);font-size:16px;font-weight:700;text-align:left}
+.nav{box-sizing:border-box;color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:14px;width:100%;height:58px;padding:0 16px;border:0;border-radius:14px;background:var(--surface-2);font-size:16px;font-weight:700;text-align:left}
 .nav svg{width:22px;height:22px;flex:none}
 .nav .chev{margin-left:auto;color:var(--muted)}
 .check{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--ink-2);cursor:pointer}
