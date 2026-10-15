@@ -16,6 +16,8 @@
   --off:#A3A8AE;
   --off-wash:#E6E7E9;
   --here:#2F6FDB;
+  --pick:#F2B300;
+  --pick-edge:#1C1D1F;
   --warn:#B4600C;
   --on-ink:#FFFFFF;
   --r-card:18px; --r-ctl:14px; --r-btn:12px; --r-badge:8px;
@@ -31,7 +33,7 @@
   :root:not([data-theme="light"]){
     --ground:#141516; --surface:#1E2022; --surface-2:#26292C; --chip-2:#2C2F33; --line:#2E3134;
     --ink:#F2F2F2; --ink-2:#D0D0D0; --muted:#A6A6A6;
-    --ok:#4FC983; --on-ok:#000000; --off:#6E747B; --off-wash:#33373B; --here:#5B92F0; --warn:#F0A04B; --on-ink:#141516;
+    --ok:#4FC983; --on-ok:#000000; --off:#6E747B; --off-wash:#33373B; --here:#5B92F0; --pick:#FFC93C; --pick-edge:transparent; --warn:#F0A04B; --on-ink:#141516;
     --shadow-card:0 4px 18px rgba(0,0,0,.5); --shadow-ctl:0 2px 10px rgba(0,0,0,.45);
     color-scheme:dark;
   }
@@ -39,7 +41,7 @@
 :root[data-theme="dark"]{
   --ground:#141516; --surface:#1E2022; --surface-2:#26292C; --chip-2:#2C2F33; --line:#2E3134;
   --ink:#F2F2F2; --ink-2:#D0D0D0; --muted:#A6A6A6;
-  --ok:#4FC983; --on-ok:#000000; --off:#6E747B; --off-wash:#33373B; --here:#5B92F0; --warn:#F0A04B; --on-ink:#141516;
+  --ok:#4FC983; --on-ok:#000000; --off:#6E747B; --off-wash:#33373B; --here:#5B92F0; --pick:#FFC93C; --pick-edge:transparent; --warn:#F0A04B; --on-ink:#141516;
   --shadow-card:0 4px 18px rgba(0,0,0,.5); --shadow-ctl:0 2px 10px rgba(0,0,0,.45);
   color-scheme:dark;
 }
@@ -153,14 +155,14 @@ body.dim-tiles .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness
 /* ---------- 地図の上の印 ---------- */
 .pm{width:0 !important;height:0 !important;border:0;background:none}
 .pw{position:absolute;left:0;top:0;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center}
-.p{display:grid;place-items:center;width:20px;height:20px;border-radius:6px;background:var(--off);color:#fff;border:2px solid #fff;font:700 11px/1 var(--f-body);box-shadow:0 1px 3px rgba(0,0,0,.25);box-sizing:border-box}
-.p.ok{width:24px;height:24px;border-radius:7px;background:var(--ok);color:var(--on-ok);font-size:13px}
-.p.tiny{width:14px;height:14px;border-radius:4px;border-width:1.5px;font-size:0}
-.ptag{position:absolute;top:calc(100% + 3px);padding:1px 5px;border-radius:5px;background:#fff;color:#1E7F4A;font:700 11px/1.35 var(--f-body);white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.2)}
-.pw.sel{transform:translate(-50%,calc(-100% - 6px))}
-.pw.sel .p{width:36px;height:36px;border-radius:10px;border-width:3px;font-size:18px;box-shadow:0 0 0 2px var(--ink),0 3px 8px rgba(0,0,0,.3)}
-.pw.sel::after{content:"";width:0;height:0;margin-top:1px;border:7px solid transparent;border-top-color:var(--ink);border-bottom:0}
-.pw.sel .ptag{display:none}
+/* Pマーク：寄った地図の小さいP（18px）と、選んだ区間の大きいP（32px・下に三角）。地の色は状態の色 */
+.pw{--pc:var(--off)}
+.pw.ok{--pc:var(--ok)}
+.p{display:grid;place-items:center;width:18px;height:18px;border-radius:5px;background:var(--pc);color:#fff;border:2px solid #fff;font:700 10px/1 var(--f-body);box-shadow:0 1px 3px rgba(0,0,0,.25);box-sizing:border-box}
+.pw.ok .p{color:var(--on-ok)}
+.pw.sel{transform:translate(-50%,calc(-100% - 4px))}
+.pw.sel .p{width:32px;height:32px;border-radius:9px;border-width:3px;font-size:16px;box-shadow:var(--shadow-ctl)}
+.pw.sel::after{content:"";width:0;height:0;margin-top:-1px;border:6px solid transparent;border-top-color:#fff;border-bottom:0;filter:drop-shadow(0 2px 1px rgba(0,0,0,.2))}
 .here{position:absolute;left:0;top:0;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;background:var(--here);border:3px solid #fff;box-shadow:0 0 0 7px rgba(47,111,219,.2),0 1px 4px rgba(0,0,0,.3)}
 .destm{position:absolute;left:0;top:0;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center}
 .destm i{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:#1C1D1F;color:#fff;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)}

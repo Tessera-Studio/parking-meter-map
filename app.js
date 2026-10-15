@@ -4,8 +4,8 @@
 const GINZA = [35.6717, 139.7650]; // 現在地が取れないときに最初に見せる場所
 const LIST_MAX = 40;   // カードに出す件数
 const NEAR_M = 1000;   // カードに出す範囲（起点から区間の線まで）
-const SMALL_ZOOM = 14; // これより引いた地図では線を省き、Pマークだけ出す
-const TINY_ZOOM = 12;  // これより引いた地図では、Pマークを小さくする
+const SMALL_ZOOM = 14;  // これより引いた地図では、線を細くする
+const DETAIL_ZOOM = 17; // ここまで寄ったら、全区間に小さいPマークを出す（それまでは選んだ区間だけ）
 const WALK_M_MIN = 80; // 徒歩1分の距離
 const DEST_R = 400;    // 行き先のまわりに描く円（徒歩5分）
 const CAR_KMH = 20;    // 「ここへ行く」の所要時間の目安（直線距離×1.4 をこの速さで）
@@ -217,18 +217,20 @@ function initMap() {
 const colors = () => {
   const cs = getComputedStyle(document.documentElement);
   const v = k => cs.getPropertyValue(k).trim();
-  return { ok: v('--ok'), off: v('--off'), ink: v('--ink') };
+  return { ok: v('--ok'), off: v('--off'), pick: v('--pick'), edge: v('--pick-edge') };
 };
 
 // 区間の線とPマーク。重なり順はグレー → 緑 → 選んだ区間
+// 線はいつも出す。Pマークは選んだ区間と、DETAIL_ZOOM まで寄った地図だけ。地図の上に時刻の札は出さない
 function draw() {
   if (!zones.length) return;
   layer.clearLayers();
   const col = colors();
+  const dark = darkQ.matches;
   const t = when();
   const zoom = map.getZoom();
   const small = zoom < SMALL_ZOOM;
-  const tiny = zoom < TINY_ZOOM;
+  const allP = zoom >= DETAIL_ZOOM;
   const view = map.getBounds().pad(.3);
   const items = [];
   zones.forEach(z => {
@@ -243,28 +245,29 @@ function draw() {
     const ok = a === 'ok';
     const c = ok ? col.ok : col.off;
     const parts = [];
-    if (!small) {
-      z.lines.forEach(l => {
-        if (l.length < 2) return;
-        if (sel) {
-          parts.push(L.polyline(l, { color: col.ink, weight: 15, opacity: 1, lineCap: 'round' }));
-          parts.push(L.polyline(l, { color: c, weight: 9, opacity: 1, lineCap: 'round' }));
-        } else if (ok) {
-          parts.push(L.polyline(l, { color: '#fff', weight: 11, opacity: 1, lineCap: 'round' }));
-          parts.push(L.polyline(l, { color: c, weight: 7, opacity: 1, lineCap: 'round' }));
-        } else {
-          parts.push(L.polyline(l, { color: c, weight: 4, opacity: 1, lineCap: 'butt', dashArray: a === 'unk' ? '4 6' : null }));
-        }
-        // 細い線でも押しやすいよう、見えない太い当たり判定を重ねる
-        parts.push(L.polyline(l, { color: c, weight: 18, opacity: 0 }));
-      });
+    const line = (l, o) => parts.push(L.polyline(l, { opacity: 1, lineCap: 'round', lineJoin: 'round', ...o }));
+    z.lines.forEach(l => {
+      if (l.length < 2) return;
+      if (sel) {
+        // 選んだ区間は状態に関係なく --pick。状態はPマークの色とカードのバッジで見せる
+        if (!dark) line(l, { color: col.edge, weight: 12 });
+        line(l, { color: col.pick, weight: 8 });
+      } else if (ok) {
+        if (!small && !dark) line(l, { color: '#fff', weight: 10 });
+        line(l, { color: c, weight: small ? 4 : 6 });
+      } else {
+        line(l, { color: c, weight: small ? 2 : 4, lineCap: 'butt', dashArray: a === 'unk' ? '4 6' : null });
+      }
+      // 細い線でも押しやすいよう、見えない太い当たり判定を重ねる
+      parts.push(L.polyline(l, { color: c, weight: 18, opacity: 0 }));
+    });
+    if (sel || allP) {
+      const html = `<div class="pw${sel ? ' sel' : ''}${ok ? ' ok' : ''}" data-id="${esc(z.id)}"><div class="p">P</div></div>`;
+      parts.push(L.marker(z.center, {
+        icon: L.divIcon({ className: 'pm', html, iconSize: [0, 0] }),
+        zIndexOffset: rank * 1000, keyboard: false, title: zoneName(z),
+      }));
     }
-    const tag = ok && !small && !sel ? `<span class="ptag">〜${esc(hm(z.span[1]))}</span>` : '';
-    const html = `<div class="pw${sel ? ' sel' : ''}" data-id="${esc(z.id)}"><div class="p${ok ? ' ok' : ''}${tiny && !sel ? ' tiny' : ''}">P</div>${tag}</div>`;
-    parts.push(L.marker(z.center, {
-      icon: L.divIcon({ className: 'pm', html, iconSize: [0, 0] }),
-      zIndexOffset: rank * 1000, keyboard: false, title: zoneName(z),
-    }));
     parts.forEach(p => { p.on('click', () => pickOnMap(z)); layer.addLayer(p); });
   });
 }
