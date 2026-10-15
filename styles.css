@@ -130,7 +130,7 @@ body.dim-tiles .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness
 .csub span:first-child{overflow:hidden;text-overflow:ellipsis}
 .cnum{flex:none}
 .card.no .cname,.card.unk .cname{color:var(--ink-2)}
-.cbtns{display:grid;grid-template-columns:1fr 72px;gap:8px;margin-top:2px}
+.cbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
 .cbtns .btn{height:44px;padding:0 10px}
 .btn.inkbtn{background:var(--ink);color:var(--surface)}
 .badge{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border-radius:var(--r-badge);font-size:13px;font-weight:700;white-space:nowrap}
