@@ -635,7 +635,7 @@ function renderTimer() {
     <div class="tin">
       <button class="round tclose" id="tclose" type="button" aria-label="閉じる">${I.down}</button>
       <div class="thead">
-        <span class="badge ${running ? 'ok' : 'off'}">${running ? '駐車中' : 'タイマー'}</span>
+        <span class="badge ${running ? 'ok' : 'off'}" id="tbadge">${running ? '駐車中' : 'タイマー'}</span>
         <h2>${esc(z ? zoneName(z) : '区間を選んでください')}</h2>
         ${z ? `<p>${esc(kicker(z))}</p>` : ''}
       </div>
@@ -669,6 +669,8 @@ function updateTimer() {
   const z = timer ? byId.get(timer.zoneId) : timerZone;
   let frac = 1, html;
   const over = !!timer && Date.now() >= timer.startedAt + timer.limitMin * 60000;
+  // 残り10分を切ったら、円と数字を赤にする
+  const soon = !!timer && !over && timer.startedAt + timer.limitMin * 60000 - Date.now() <= 10 * 60000;
   if (!timer) {
     html = `<small>最大</small><b>${esc(z ? fmtMin(z.limitMin || 60) : '—')}</b>`;
   } else if (over) {
@@ -684,6 +686,13 @@ function updateTimer() {
   fg.setAttribute('stroke-dasharray', C);
   fg.setAttribute('stroke-dashoffset', C * (1 - Math.max(0, Math.min(1, frac))));
   $('#ring').classList.toggle('over', over);
+  $('#ring').classList.toggle('soon', soon);
+  // 時間になったら、上の札を赤い「時間切れ」にする
+  const tb = $('#tbadge');
+  if (tb && timer) {
+    tb.className = `badge ${over ? 'alert' : 'ok'}`;
+    tb.textContent = over ? '時間切れ' : '駐車中';
+  }
   if ($('#rtext').innerHTML !== html) $('#rtext').innerHTML = html;
 }
 
