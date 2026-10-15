@@ -505,6 +505,7 @@ function renderDetail(z) {
   ].join('');
   $('#dsheet').innerHTML = `
     <div class="dhead">
+      <button class="dclose" type="button" data-close aria-label="閉じる">${svg('<path d="M6 6l12 12M18 6L6 18"/>')}</button>
       <p class="dkick">${esc(kicker(z))}</p>
       <div class="dtitle"><h2 id="dtitle">${esc(zoneName(z))}</h2><span>${esc(distText(d))}</span></div>
     </div>
@@ -530,6 +531,8 @@ function renderDetail(z) {
 function openDetail(z) {
   if (!z) return;
   showPanel('');
+  // 端末の「戻る」（Android の戻るボタン・iPhone のスワイプ）でも閉じられるよう、履歴を1つ積む
+  if (!state.detail) { try { history.pushState({ pmm: 'detail' }, ''); } catch (e) {} }
   state.detail = true;
   state.sel = z.id;
   document.body.classList.add('in-detail');
@@ -541,7 +544,13 @@ function openDetail(z) {
   $('#dback').focus({ preventScroll: true });
 }
 
+// 詳細を閉じる。積んだ履歴が残っていれば「戻る」で閉じる（popstate から closeDetail が呼ばれる）
+function leaveDetail() {
+  if (history.state && history.state.pmm === 'detail') history.back();
+  else closeDetail();
+}
 function closeDetail() {
+  if (!state.detail) return;
   state.detail = false;
   $('#detail').hidden = true;
   document.body.classList.remove('in-detail');
@@ -692,7 +701,7 @@ function stopTimer() {
 function checkCar() {
   if (!timer) return;
   closeTimer();
-  if (state.detail) closeDetail();
+  if (state.detail) leaveDetail();
   state.moved = true;
   showTimerState();
   centerOn(timer.carLatLng, Math.max(map.getZoom(), 18), true);
@@ -891,7 +900,9 @@ function bind() {
     const c = e.target.closest('.card[data-id]');
     if (c && e.target === c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); select(c.dataset.id, { pan: true }); }
   });
-  $('#dback').addEventListener('click', closeDetail);
+  $('#dback').addEventListener('click', leaveDetail);
+  $('#dsheet').addEventListener('click', e => { if (e.target.closest('[data-close]')) leaveDetail(); });
+  window.addEventListener('popstate', () => { if (state.detail) closeDetail(); });
   $('#goScrim').addEventListener('click', e => { if (e.target === $('#goScrim')) closeGo(); });
 
   $('#timerBtn').addEventListener('click', openTimer);
@@ -923,7 +934,7 @@ function bind() {
     if (!$('#goScrim').hidden) closeGo();
     else if (!$('#timer').hidden) closeTimer();
     else if (!$('#qpanel').hidden) showPanel('');
-    else if (state.detail) closeDetail();
+    else if (state.detail) leaveDetail();
   });
 
   // カードの高さに合わせて、右下のボタンの位置を決める
