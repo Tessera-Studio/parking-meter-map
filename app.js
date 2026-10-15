@@ -178,7 +178,7 @@ function initMap() {
 
 const colors = () => {
   const cs = getComputedStyle(document.documentElement);
-  return { ok: cs.getPropertyValue('--ok').trim(), no: cs.getPropertyValue('--no').trim(), ink: cs.getPropertyValue('--ink').trim() };
+  return { ok: cs.getPropertyValue('--ok').trim(), no: cs.getPropertyValue('--no').trim(), ink: cs.getPropertyValue('--ink').trim(), halo: cs.getPropertyValue('--surface').trim() };
 };
 const weight = () => Math.max(4, Math.min(10, map.getZoom() - 8));
 
@@ -194,13 +194,19 @@ function draw() {
     const on = z.id === state.sel;
     const w = weight();
     const parts = [];
-    const dot = ll => L.circleMarker(ll, { radius: on ? 8 : a === 'ok' ? 4 : 3, color: on ? col.ink : c, weight: on ? 3 : 0, fillColor: c, fillOpacity: a === 'unk' ? .45 : .9 });
+    // 停められる区間は太い緑に白い縁。時間外・時間不明は細く薄い灰色にして、場所だけ分かるようにする（グレーアウト）
+    const ok = a === 'ok';
+    const dot = ll => L.circleMarker(ll, { radius: on ? 8 : ok ? 5 : 3, color: on ? col.ink : ok ? col.halo : c, weight: on ? 3 : ok ? 2 : 0, fillColor: c, fillOpacity: ok ? 1 : .45 });
     if (small) parts.push(dot(z.center));
     else {
       z.lines.forEach(l => {
         if (l.length === 1) { parts.push(dot(l[0])); return; }
-        if (on) parts.push(L.polyline(l, { color: col.ink, weight: w + 8, opacity: 1, lineCap: 'butt' }));
-        parts.push(L.polyline(l, { color: c, weight: on ? w + 4 : w, opacity: a === 'ok' ? .95 : .75, lineCap: 'butt', dashArray: a === 'unk' ? '6 8' : null }));
+        const lw = on ? w + 2 : ok ? w : Math.max(3, Math.round(w * .5));
+        if (on) parts.push(L.polyline(l, { color: col.ink, weight: lw + 6, opacity: 1, lineCap: 'butt' }));
+        else if (ok) parts.push(L.polyline(l, { color: col.halo, weight: lw + 4, opacity: 1, lineCap: 'butt' }));
+        parts.push(L.polyline(l, { color: c, weight: lw, opacity: ok || on ? 1 : .45, lineCap: 'butt', dashArray: a === 'unk' ? '4 6' : null }));
+        // 細い線でも押しやすいよう、見えない太い当たり判定を重ねる
+        if (!ok && !on) parts.push(L.polyline(l, { color: c, weight: 18, opacity: 0, lineCap: 'butt' }));
       });
     }
     parts.forEach(p => { p.on('click', () => openDetail(z, false)); layer.addLayer(p); });
