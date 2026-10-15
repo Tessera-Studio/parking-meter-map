@@ -14,14 +14,14 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="vendor/maplibre-gl.css?v=afb6efe2">
 <link rel="stylesheet" href="vendor/leaflet.css?v=ec929f11">
-<link rel="stylesheet" href="styles.css?v=2c27157c">
+<link rel="stylesheet" href="styles.css?v=5704d9f4">
 </head>
 <body>
 
 <main class="app">
   <div id="map"></div>
 
-  <!-- 上：検索・タイマー・チップ -->
+  <!-- 上：検索・タイマー -->
   <div class="top" id="top">
     <div class="toprow">
       <form class="search" id="qform" role="search">
@@ -33,15 +33,6 @@
       <button class="ctl timerbtn" id="timerBtn" type="button" aria-label="タイマー"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg><i class="dot" aria-hidden="true"></i></button>
     </div>
     <div class="qpanel" id="qpanel" hidden></div>
-    <div class="chips">
-      <button class="chip dark" type="button" id="whenChip" aria-haspopup="true" aria-expanded="false" aria-controls="whenPop"><span id="whenText">いま</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
-      <button class="chip" type="button" id="greenChip" aria-pressed="false"><i class="gl" aria-hidden="true"></i>緑だけ</button>
-    </div>
-    <div class="whenpop" id="whenPop" hidden>
-      <select id="whenDay" aria-label="日"></select>
-      <select id="whenHour" aria-label="時刻"></select>
-      <button class="chip" type="button" id="whenNow">いまに戻す</button>
-    </div>
   </div>
 
   <!-- 右下：地図の切り替え・現在地 -->
@@ -84,6 +75,6 @@
 <script src="vendor/leaflet-maplibre-gl.js?v=e79b564d"></script>
 <script src="basemap.js?v=39bd8e0c"></script>
 <script src="zones.js?v=0a80f9b4"></script>
-<script src="app.js?v=d87f455e"></script>
+<script src="app.js?v=04b1e7f4"></script>
 </body>
 </html>

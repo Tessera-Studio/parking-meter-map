@@ -92,7 +92,6 @@ function dayWord(t) {
   return d === 0 ? 'きょう' : d === 1 ? 'あす' : `${'日月火水木金土'[t.getDay()]}曜`;
 }
 const when = () => state.at || new Date();
-const whenLabel = () => (state.at ? `${dayWord(state.at)} ${hmOf(state.at)}` : `いま ${hmOf(new Date())}`);
 
 /* ---------- 使える時間か ---------- */
 // ok＝使える／no＝時間外／unk＝時間が公開されていない（神奈川など）
@@ -172,7 +171,7 @@ function region() {
     if (narrow()) return { l: 0, t: 0, r: W, b: $('#dsheet').getBoundingClientRect().top };
     return { l: $('#detail').offsetWidth, t: 0, r: W, b: H };
   }
-  const t = $('.chips').getBoundingClientRect().bottom;
+  const t = $('.toprow').getBoundingClientRect().bottom;
   if (narrow()) return { l: 0, t, r: W, b: $('#cards').getBoundingClientRect().top };
   return { l: $('#cards').offsetWidth, t, r: W, b: H };
 }
@@ -233,7 +232,6 @@ function draw() {
     const sel = z.id === state.sel;
     if (!sel && !view.intersects(z.bounds)) return;
     const a = avail(z, t);
-    if (state.green && a !== 'ok' && !sel) return;
     items.push({ z, a, sel, rank: sel ? 2 : a === 'ok' ? 1 : 0 });
   });
   items.sort((p, q) => p.rank - q.rank);
@@ -291,7 +289,7 @@ function computeRows(extra) {
     .map(r => ({ ...r, s: status(r.z, t) }));
   const byD = (p, q) => p.d - q.d;
   let ok = rows.filter(r => r.s.a === 'ok').sort(byD);
-  let rest = state.green && ok.length ? [] : rows.filter(r => r.s.a !== 'ok').sort(byD);
+  let rest = rows.filter(r => r.s.a !== 'ok').sort(byD);
   let list = [...ok, ...rest].slice(0, LIST_MAX);
   if (extra && !list.some(r => r.z.id === extra.id)) {
     const r = { z: extra, d: nearest(extra, o), s: status(extra, t) };
@@ -303,23 +301,29 @@ function computeRows(extra) {
   return list;
 }
 
-function cardHtml(r, i, n, anyOk) {
+// カードの「時間」：利用時間と、使えない曜日をひとことで
+function hoursShort(z) {
+  if (z.days === 'unknown' || !z.span) return { v: '現地で確認', note: '' };
+  const r = z.rules.join(' ');
+  return { v: z.hours, note: /土/.test(r) ? '土日祝は休み' : /日曜|休日/.test(r) ? '日祝は休み' : z.months ? '冬期は休み' : '' };
+}
+
+function cardHtml(r, i, n) {
   const { z, d, s } = r;
-  let btns;
-  if (!anyOk && s.a === 'no') {
-    // 近くに緑がないとき：次に使える時刻で見直すか、近くの駐車場を探す
-    btns = (s.next ? `<button class="btn dark" type="button" data-act="at" data-t="${s.next.getTime()}">${esc(`${dayWord(s.next)} ${hmOf(s.next)}`)} で見る</button>` : `<button class="btn sub" type="button" data-act="detail">詳細</button>`)
-      + `<button class="btn sub" type="button" data-act="lots">近くの駐車場 ↗</button>`;
-  } else {
-    btns = `<button class="btn ${s.a === 'ok' ? 'go' : 'dark'}" type="button" data-act="go">${I.go}ここへ行く</button>`
-      + `<button class="btn sub" type="button" data-act="detail">詳細</button>`;
-  }
+  const h = hoursShort(z);
   return `
     <article class="card ${s.a === 'ok' ? 'ok' : 'off'}${z.id === state.sel ? ' sel' : ''}" data-id="${esc(z.id)}" tabindex="0" aria-label="${esc(`${zoneName(z)}、${s.text}`)}">
       <div class="chead">${badge(s)}<span class="cnum">${i + 1} / ${n}</span></div>
       <div class="crow"><span class="cname">${esc(zoneName(z))}</span><span class="cdist">${esc(distText(d))}</span></div>
-      <div class="cmeta">${esc([terms(z), kindShort(z)].join(' · '))}</div>
-      <div class="cbtns">${btns}</div>
+      <div class="cfacts">
+        <div><span>最大</span><b>${esc(fmtLimit(z) || '—')}</b></div>
+        <div><span>料金</span><b>${esc(fmtFee(z) || '—')}</b></div>
+        <div class="ctime"><span>時間${h.note ? `<i>${esc(h.note)}</i>` : ''}</span><b>${esc(h.v)}</b></div>
+      </div>
+      <div class="cbtns">
+        <button class="btn big ${s.a === 'ok' ? 'go' : 'dark'}" type="button" data-act="go">${I.go}ここへ行く</button>
+        <button class="btn sub" type="button" data-act="detail">詳細</button>
+      </div>
     </article>`;
 }
 
@@ -327,7 +331,6 @@ function renderCards(extra) {
   if (!zones.length || state.detail) return;
   const list = computeRows(extra);
   state.rows = list;
-  const anyOk = list.some(r => r.s.a === 'ok');
   const tag = $('#destTag');
   tag.hidden = !state.dest;
   if (state.dest) tag.innerHTML = `${esc(state.dest.name)}の近く <b>${list.length}か所</b>（近い順）`;
@@ -346,7 +349,7 @@ function renderCards(extra) {
     return;
   }
   if (!list.some(r => r.z.id === state.sel)) state.sel = list[0].z.id;
-  $('#track').innerHTML = list.map((r, i) => cardHtml(r, i, list.length, anyOk)).join('');
+  $('#track').innerHTML = list.map((r, i) => cardHtml(r, i, list.length)).join('');
   scrollToCard(state.sel, false);
   draw();
 }
@@ -411,11 +414,7 @@ function onCardClick(e) {
     const act = b.dataset.act;
     if (act === 'go') startGo(z);
     else if (act === 'detail') openDetail(z);
-    else if (act === 'at') setAt(new Date(+b.dataset.t));
-    else if (act === 'lots') {
-      const [lat, lng] = z ? z.center : origin();
-      window.open(`https://www.google.com/maps/search/${encodeURIComponent('駐車場')}/@${lat},${lng},16z`, '_blank', 'noopener');
-    } else if (act === 'nearest' && z) { state.moved = true; centerOn(z.center, 16); }
+    else if (act === 'nearest' && z) { state.moved = true; centerOn(z.center, 16); }
     return;
   }
   if (card?.dataset.id) select(card.dataset.id, { pan: true, scroll: true });
@@ -510,7 +509,7 @@ function renderDetail(z) {
 
 function openDetail(z) {
   if (!z) return;
-  showPanel(''); showWhen(false);
+  showPanel('');
   state.detail = true;
   state.sel = z.id;
   document.body.classList.add('in-detail');
@@ -586,7 +585,7 @@ const timerZoneOf = () => {
 };
 
 function openTimer() {
-  showPanel(''); showWhen(false);
+  showPanel('');
   timerZone = timerZoneOf();
   renderTimer();
   $('#timer').hidden = false;
@@ -707,48 +706,8 @@ function tickTimer() {
   } catch (e) { /* 通知を出せない端末では画面の表示だけ */ }
 }
 
-/* ---------- いつ ---------- */
-function fillWhen() {
-  const today = new Date();
-  const opts = [[0, 'きょう'], [1, 'あす']];
-  // 次の土曜・日曜（きょう・あすと重なるときは出さない）
-  [6, 0].forEach(dow => {
-    const d = (dow - today.getDay() + 7) % 7;
-    if (d > 1) {
-      const t = new Date(today); t.setDate(t.getDate() + d);
-      opts.push([d, `${'日月火水木金土'[dow]}曜（${t.getMonth() + 1}/${t.getDate()}）`]);
-    }
-  });
-  $('#whenDay').innerHTML = opts.map(([v, k]) => `<option value="${v}">${k}</option>`).join('');
-  let hrs = '';
-  for (let h = 0; h < 24; h++) hrs += `<option value="${h}">${h}:00</option>`;
-  $('#whenHour').innerHTML = hrs;
-  $('#whenHour').value = String((today.getHours() + 1) % 24);
-}
-function showWhen(open) {
-  $('#whenPop').hidden = !open;
-  $('#whenChip').setAttribute('aria-expanded', open);
-}
-function fromSelects() {
-  const t = new Date();
-  t.setDate(t.getDate() + +$('#whenDay').value);
-  t.setHours(+$('#whenHour').value, 0, 0, 0);
-  setAt(t, false);
-}
-// 日時を決める（null ならいま）。sync：日・時刻の選択欄もその日時に合わせる
-function setAt(t, sync = true) {
-  state.at = t;
-  if (t && sync) {
-    const a = new Date(); a.setHours(0, 0, 0, 0);
-    const b = new Date(t); b.setHours(0, 0, 0, 0);
-    const d = String(Math.round((b - a) / 864e5));
-    if ([...$('#whenDay').options].some(o => o.value === d)) $('#whenDay').value = d;
-    $('#whenHour').value = String(t.getHours());
-  }
-  refresh();
-}
+/* ---------- 見直し ---------- */
 function refresh() {
-  $('#whenText').textContent = whenLabel();
   draw();
   if (state.detail) { const z = byId.get(state.sel); if (z) renderDetail(z); } else renderCards();
 }
@@ -888,7 +847,7 @@ function watchHere() {
 /* ---------- 組み立て ---------- */
 function bind() {
   $('#qform').addEventListener('submit', e => { e.preventDefault(); $('#q').blur(); search($('#q').value); });
-  $('#q').addEventListener('focus', () => { $('#q').select(); showWhen(false); if (!$('#q').value.trim() || state.dest) idlePanel(); });
+  $('#q').addEventListener('focus', () => { $('#q').select(); if (!$('#q').value.trim() || state.dest) idlePanel(); });
   $('#q').addEventListener('input', () => { if (!$('#q').value.trim()) idlePanel(); else showPanel(''); });
   $('#qback').addEventListener('click', () => clearDest(true));
   $('#qclear').addEventListener('click', () => clearDest(false));
@@ -902,18 +861,6 @@ function bind() {
   document.addEventListener('click', e => {
     if (e.target.closest('.top')) return;
     if (!$('#qpanel').hidden) showPanel('');
-    showWhen(false);
-  });
-
-  $('#whenChip').addEventListener('click', () => { showPanel(''); showWhen($('#whenPop').hidden); });
-  $('#whenDay').addEventListener('change', fromSelects);
-  $('#whenHour').addEventListener('change', fromSelects);
-  $('#whenNow').addEventListener('click', () => { showWhen(false); setAt(null); });
-  $('#greenChip').addEventListener('click', () => {
-    state.green = !state.green;
-    $('#greenChip').setAttribute('aria-pressed', state.green);
-    draw();
-    if (!state.detail) renderCards();
   });
 
   $('#track').addEventListener('click', onCardClick);
@@ -954,7 +901,6 @@ function bind() {
     if (!$('#goScrim').hidden) closeGo();
     else if (!$('#timer').hidden) closeTimer();
     else if (!$('#qpanel').hidden) showPanel('');
-    else if (!$('#whenPop').hidden) showWhen(false);
     else if (state.detail) closeDetail();
   });
 
@@ -970,8 +916,6 @@ function bind() {
 async function boot() {
   initMap();
   bind();
-  fillWhen();
-  $('#whenText').textContent = whenLabel();
   try {
     zones = Zones.normalize(await (await fetch('data/zones.geojson', { cache: 'no-cache' })).json());
   } catch (e) {

@@ -79,15 +79,9 @@ body.dim-tiles .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness
 .timerbtn .dot{display:none;position:absolute;top:10px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 2px var(--surface)}
 .timerbtn.on .dot{display:block}
 
-.chips{display:flex;gap:8px;flex-wrap:wrap}
 .chip{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border:0;border-radius:50px;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-ctl);font-size:15px;font-weight:700;white-space:nowrap}
 .chip svg{width:16px;height:16px}
-.chip.dark,.chip[aria-pressed="true"]{background:var(--ink);color:var(--on-ink)}
-.chip .gl{display:inline-block;width:16px;height:4px;border-radius:2px;background:var(--ok)}
 
-.whenpop{justify-self:start;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px;background:var(--surface);border-radius:var(--r-ctl);box-shadow:var(--shadow-card)}
-.whenpop select{height:40px;border:0;border-radius:var(--r-btn);background:var(--chip-2);padding:0 10px;font-size:15px;font-weight:700}
-.whenpop .chip{box-shadow:none;background:var(--chip-2)}
 
 /* 場所の候補 */
 .qpanel{background:var(--surface);border-radius:var(--r-ctl);box-shadow:var(--shadow-card);max-height:min(60vh,520px);overflow-y:auto}
@@ -128,9 +122,18 @@ body.dim-tiles .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness
 .crow{display:flex;align-items:baseline;justify-content:space-between;gap:10px;min-width:0}
 .cname{flex:none;max-width:62%;font-size:22px;font-weight:700;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cdist{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:15px;font-weight:700;white-space:nowrap}
+/* カードの「最大・料金・時間」 */
+.cfacts{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:6px}
+.cfacts div{background:var(--surface-2);border-radius:12px;padding:8px 9px;display:grid;gap:1px;min-width:0}
+.cfacts span{display:flex;align-items:baseline;gap:6px;font-size:12px;color:var(--muted);white-space:nowrap}
+.cfacts span i{font-style:normal;font-size:11px;overflow:hidden;text-overflow:ellipsis}
+.cfacts b{font-size:clamp(16px,5vw,20px);letter-spacing:-.01em;font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card.off .cfacts b{color:var(--ink-2)}
 .cmeta{font-size:14px;color:var(--muted);margin-top:-4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .card.off .cname,.card.off .cdist{color:var(--ink-2)}
 .cbtns{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:2px}
+.cbtns .btn.big{height:52px;font-size:17px}
+.cbtns .btn.sub{height:52px}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 16px;border:0;border-radius:var(--r-btn);font-size:15px;font-weight:700;text-decoration:none;white-space:nowrap;color:var(--ink)}
 .btn svg{width:18px;height:18px}
 .btn.go{background:var(--ok);color:var(--on-ok)}
