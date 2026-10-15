@@ -16,6 +16,7 @@
   --off:#A3A8AE;
   --off-wash:#E6E7E9;
   --here:#2F6FDB;
+  --warn:#B4600C;
   --on-ink:#FFFFFF;
   --r-card:18px; --r-ctl:14px; --r-btn:12px; --r-badge:8px;
   --shadow-card:0 4px 18px rgba(0,0,0,.14);
@@ -30,7 +31,7 @@
   :root:not([data-theme="light"]){
     --ground:#141516; --surface:#1E2022; --surface-2:#26292C; --chip-2:#2C2F33; --line:#2E3134;
     --ink:#F2F2F2; --ink-2:#D0D0D0; --muted:#A6A6A6;
-    --ok:#4FC983; --on-ok:#000000; --off:#6E747B; --off-wash:#33373B; --here:#5B92F0; --on-ink:#141516;
+    --ok:#4FC983; --on-ok:#000000; --off:#6E747B; --off-wash:#33373B; --here:#5B92F0; --warn:#F0A04B; --on-ink:#141516;
     --shadow-card:0 4px 18px rgba(0,0,0,.5); --shadow-ctl:0 2px 10px rgba(0,0,0,.45);
     color-scheme:dark;
   }
@@ -38,7 +39,7 @@
 :root[data-theme="dark"]{
   --ground:#141516; --surface:#1E2022; --surface-2:#26292C; --chip-2:#2C2F33; --line:#2E3134;
   --ink:#F2F2F2; --ink-2:#D0D0D0; --muted:#A6A6A6;
-  --ok:#4FC983; --on-ok:#000000; --off:#6E747B; --off-wash:#33373B; --here:#5B92F0; --on-ink:#141516;
+  --ok:#4FC983; --on-ok:#000000; --off:#6E747B; --off-wash:#33373B; --here:#5B92F0; --warn:#F0A04B; --on-ink:#141516;
   --shadow-card:0 4px 18px rgba(0,0,0,.5); --shadow-ctl:0 2px 10px rgba(0,0,0,.45);
   color-scheme:dark;
 }
@@ -113,27 +114,33 @@ body.dim-tiles .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness
 .track::after{content:"";flex:0 0 max(1px,calc(100vw - var(--card-w) - 36px))}
 
 .card{flex:0 0 min(var(--card-w),calc(100vw - 48px));scroll-snap-align:start;display:grid;gap:8px;padding:14px 16px 16px;background:var(--surface);border-radius:var(--r-card);box-shadow:var(--shadow-card);text-align:left;cursor:pointer}
-.chead{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.cnum{font-size:13px;color:var(--muted)}
+/* カードの頭：Pマーク・区間名・状態のバッジ。下に種類・距離・件数 */
+.chead{display:flex;align-items:center;gap:10px;min-width:0}
+.cp{flex:none;display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--off);color:#fff;font:700 15px/1 var(--f-body);font-style:normal}
+.card.ok .cp{background:var(--ok);color:var(--on-ok)}
+.cname{flex:1;min-width:0;font-size:22px;font-weight:700;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chead .badge{flex:none}
+.csub{display:flex;justify-content:space-between;gap:10px;margin-top:-4px;padding-bottom:10px;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted);white-space:nowrap}
+.csub span:first-child{overflow:hidden;text-overflow:ellipsis}
+.cnum{flex:none}
+/* 利用時間・最大・料金：アイコン・数字・見出しを縦に並べ、3つを横に */
+.cfacts{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:4px;padding:2px 0}
+.cfacts div{display:grid;justify-items:center;gap:2px;min-width:0;text-align:center}
+.cfacts svg{width:20px;height:20px;color:var(--ok)}
+.card.off .cfacts svg{color:var(--muted)}
+.cfacts b{max-width:100%;font-size:clamp(16px,4.8vw,19px);font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cfacts span{font-size:12px;color:var(--muted)}
+.card.off .cname,.card.off .cfacts b{color:var(--ink-2)}
+/* 注意書き（使えない曜日・期間） */
+.cwarn{margin:-2px 0 0;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--warn)}
+.cwarn svg{flex:none;width:17px;height:17px}
+.cbtns{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:4px}
+.cbtns .btn.big{height:52px;font-size:17px;border-radius:26px}
+.cbtns .btn.sub{height:52px;border-radius:26px}
 .badge{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border-radius:var(--r-badge);font-size:13px;font-weight:700;white-space:nowrap}
 .badge svg{width:15px;height:15px;stroke-width:2.4}
 .badge.ok{background:var(--ok);color:var(--on-ok)}
 .badge.off{background:var(--off-wash);color:var(--ink-2)}
-.crow{display:flex;align-items:baseline;justify-content:space-between;gap:10px;min-width:0}
-.cname{flex:none;max-width:62%;font-size:22px;font-weight:700;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cdist{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:15px;font-weight:700;white-space:nowrap}
-/* カードの「最大・料金・時間」 */
-.cfacts{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:6px}
-.cfacts div{background:var(--surface-2);border-radius:12px;padding:8px 9px;display:grid;gap:1px;min-width:0}
-.cfacts span{display:flex;align-items:baseline;gap:6px;font-size:12px;color:var(--muted);white-space:nowrap}
-.cfacts span i{font-style:normal;font-size:11px;overflow:hidden;text-overflow:ellipsis}
-.cfacts b{font-size:clamp(16px,5vw,20px);letter-spacing:-.01em;font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.card.off .cfacts b{color:var(--ink-2)}
-.cmeta{font-size:14px;color:var(--muted);margin-top:-4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.card.off .cname,.card.off .cdist{color:var(--ink-2)}
-.cbtns{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:2px}
-.cbtns .btn.big{height:52px;font-size:17px}
-.cbtns .btn.sub{height:52px}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 16px;border:0;border-radius:var(--r-btn);font-size:15px;font-weight:700;text-decoration:none;white-space:nowrap;color:var(--ink)}
 .btn svg{width:18px;height:18px}
 .btn.go{background:var(--ok);color:var(--on-ok)}
