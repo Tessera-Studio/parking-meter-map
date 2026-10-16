@@ -1,6 +1,6 @@
-/* パーキング・メーター・マップ（画面デザイン v2 / docs/design-v2.md）
-   地図が主役。上に検索とチップ、下（広い画面では左）に区間のカードを横に並べる。
-   区間は「道路に沿った線＋Pマーク」。緑＝その時刻に使える区間、それ以外（時間外・時間不明）はグレー。 */
+/* パーキング・メーター・マップ（画面デザイン v2 / docs/design-v2.md、Pro と広告は docs/pro-ads.md と pro.js）
+   地図が主役。上に検索、下（広い画面では左）に区間のカードを横に並べる。
+   区間は道路に沿った線。緑＝いま使える区間、赤＝時間外、グレー＝時間不明。選んだ区間は黄。 */
 const GINZA = [35.6717, 139.7650]; // 現在地が取れないときに最初に見せる場所
 const LIST_MAX = 40;   // カードに出す件数
 const NEAR_M = 1000;   // カードに出す範囲（起点から区間の線まで）
@@ -16,7 +16,8 @@ const GSI_PALE = {
   url: 'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
   attr: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>',
 };
-const SRC_ATTR = '区間データ：<a href="https://parking-meter.jp/" target="_blank" rel="noopener">警視庁</a>（<a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener">CC BY 4.0</a>）・<a href="https://www.police.pref.osaka.lg.jp/kotsu/tyusya/1/1/index.html" target="_blank" rel="noopener">大阪府警察</a>・神奈川県警察・北海道警察・京都府警察（線は OpenStreetMap から作成）';
+// 区間データの出典。警察の情報をもとに加工して作ったことを書く（docs/pro-ads.md §22）
+const SRC_ATTR = '区間データ：<a href="https://portal.data.metro.tokyo.lg.jp/" target="_blank" rel="noopener">警視庁のオープンデータ</a>（<a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener">CC BY 4.0</a>）・京都府警察・大阪府警察・神奈川県警察・北海道警察の情報をもとに Tessera Studio が作成（線は OpenStreetMap から作成）';
 const PREFS = ['北海道', '東京都', '神奈川県', '京都府', '大阪府'];
 
 // 国土地理院の地名検索・住所の逆引き（鍵不要）
@@ -61,6 +62,7 @@ const I = {
   map: svg('<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/>'),
   timer: svg('<circle cx="12" cy="13" r="8"/><path d="M12 13l3-3M9.5 2.5h5"/>'),
   yen: svg('<circle cx="12" cy="12" r="9"/><path d="M8.5 7.5L12 12l3.5-4.5M12 12v5M9 12.5h6M9 15h6"/>'),
+  check: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
   info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'),
   chev: svg('<path d="M9 6l6 6-6 6"/>'),
   down: svg('<path d="M6 9l6 6 6-6"/>'),
@@ -203,6 +205,9 @@ function initMap() {
   map = L.map('map', { center: start.c, zoom: start.z, zoomControl: false, minZoom: 6, maxZoom: 21, preferCanvas: true });
   L.control.zoom({ position: 'bottomright' }).addTo(map);
   map.attributionControl.setPosition('bottomright');
+  // 出典の左に「このアプリについて」の i ボタン
+  map.attributionControl.setPrefix('<button class="aboutbtn" type="button" aria-label="このアプリについて">i</button> <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
+  map.attributionControl.getContainer().addEventListener('click', e => { if (e.target.closest('.aboutbtn')) Pro.openAbout(); });
   map.attributionControl.addAttribution(SRC_ATTR);
   setTiles();
   layer = L.layerGroup().addTo(map);
@@ -325,8 +330,9 @@ function cardHtml(r, i, n) {
       <div class="chead"><i class="cp" aria-hidden="true">P</i><span class="cname">${esc(zoneName(z))}</span>${badge(s)}</div>
       <div class="csub"><span>${esc(sub)}</span><span class="cnum">${i + 1}/${n}</span></div>
       ${hl ? `<div class="chours">${esc(hl)}</div>` : ''}
-      <div class="cbtns">
+      <div class="cbtns${Pro.shown ? ' has-star' : ''}">
         <button class="btn inkbtn" type="button" data-act="go">${I.go}ここへ行く</button>
+        ${Pro.starBtn(z.id)}
         <button class="btn sub" type="button" data-act="detail">詳細</button>
       </div>
     </article>`;
@@ -338,7 +344,7 @@ function renderCards(extra) {
   state.rows = list;
   const tag = $('#destTag');
   tag.hidden = !state.dest;
-  if (state.dest) tag.innerHTML = `${esc(state.dest.name)}の近く <b>${list.length}か所</b>（近い順）`;
+  if (state.dest) tag.innerHTML = `<span>${esc(state.dest.name)}の近く <b>${list.length}か所</b>（近い順）</span>${Pro.placeStar()}`;
 
   if (!list.length) {
     // 1km以内に区間がない：いちばん近い区間を案内する
@@ -431,7 +437,9 @@ function onCardClick(e) {
   if (b) {
     const z = byId.get(b.dataset.id || card?.dataset.id);
     const act = b.dataset.act;
-    if (act === 'go') startGo(z);
+    // ☆はお気に入りだけを切り替える（カードの選択・めくりは起こさない）
+    if (act === 'fav') Pro.toggleFav(b.dataset.id);
+    else if (act === 'go') startGo(z);
     else if (act === 'detail') openDetail(z);
     else if (act === 'nearest' && z) { state.moved = true; centerOn(z.center, 16); }
     return;
@@ -479,13 +487,14 @@ function stateBlock(z, t) {
   return `<p class="state no"><b>${esc(s.text)}</b></p>`;
 }
 
+// 出典ラベル（docs/pro-ads.md §22）：[公開データ][おおよその位置][時間は現地で確認] の3種類
 function sourceLabel(z) {
-  if (z.days === 'unknown' || !z.span) return ['時間は現地で確認', z.pref === '神奈川県' ? '神奈川県警察' : z.source || '県警の公開情報'];
-  if (z.pref === '東京都') return ['公式データ', '警視庁 オープンデータ（2026年4月）'];
-  if (z.pref === '大阪府') return ['おおよその位置', '大阪府警察の資料から作成'];
-  if (z.pref === '北海道') return ['公式データ', '北海道警察の公開情報'];
-  if (z.pref === '京都府') return ['公式データ', '京都府警察の公開情報'];
-  return ['公式データ', z.source || '各警察の公開情報'];
+  if (z.days === 'unknown' || !z.span) return ['時間は現地で確認', z.pref === '神奈川県' ? '神奈川県警察の情報をもとに作成' : '各警察の情報をもとに作成'];
+  if (z.pref === '東京都') return ['公開データ', '警視庁のオープンデータ（東京都オープンデータカタログ）をもとに Tessera Studio が作成。', 'CC BY 4.0', 'https://creativecommons.org/licenses/by/4.0/deed.ja'];
+  if (z.pref === '大阪府') return ['おおよその位置', '大阪府警察の資料をもとに作成'];
+  if (z.pref === '京都府') return ['公開データ', '京都府警察ホームページの情報をもとに Tessera Studio が作成。', '元のページ', 'https://www.pref.kyoto.jp/fukei/site/chutai_c/tiket_meter/'];
+  if (z.pref === '北海道') return ['公開データ', '北海道警察の情報をもとに作成'];
+  return ['公開データ', '各警察の情報をもとに作成'];
 }
 
 function renderDetail(z) {
@@ -494,7 +503,7 @@ function renderDetail(z) {
   const r = state.rows.find(x => x.z.id === z.id);
   const d = r ? r.d : nearest(z, origin());
   const row = (k, v) => (v ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : '');
-  const [srcTag, srcText] = sourceLabel(z);
+  const [srcTag, srcText, srcLink, srcUrl] = sourceLabel(z);
   const more = [
     row('車種', vehicles(z)),
     row('路線', z.route),
@@ -507,7 +516,7 @@ function renderDetail(z) {
     <div class="dhead">
       <button class="dclose" type="button" data-close aria-label="閉じる">${svg('<path d="M6 6l12 12M18 6L6 18"/>')}</button>
       <p class="dkick">${esc(kicker(z))}</p>
-      <div class="dtitle"><h2 id="dtitle">${esc(zoneName(z))}</h2><span>${esc(distText(d))}</span></div>
+      <div class="dtitle"><h2 id="dtitle">${esc(zoneName(z))}</h2>${Pro.starBtn(z.id, 'dstar')}<span>${esc(distText(d))}</span></div>
     </div>
     ${stateBlock(z, t)}
     <div class="dfacts">
@@ -518,8 +527,10 @@ function renderDetail(z) {
     ${hours(z, t)}
     <p class="note">${I.info}<span>時間外は、ほとんどの区間で駐車禁止です。現地の標識・メーターの表示が優先されます。</span></p>
     ${more ? `<div class="dmore"><h3>区間の情報</h3><dl>${more}</dl></div>` : ''}
-    <p class="src"><span class="badge off">${esc(srcTag)}</span><span>${esc(srcText)}</span></p>
-    <div class="dacts"><h3>地図アプリで経路を見る</h3>${navRows(z, true)}</div>`;
+    <p class="src"><span class="badge off">${esc(srcTag)}</span><span>${esc(srcText)}${srcUrl ? ` <a href="${srcUrl}" target="_blank" rel="noopener">${esc(srcLink)}</a>` : ''}</span></p>
+    <div class="dacts"><h3>地図アプリで経路を見る</h3>${navRows(z, true)}</div>
+    ${Pro.adSlot('detail')}`;
+  Pro.fillAds($('#dsheet'));
   if (!z.addr && !addrCache.has(z.id)) {
     address(z).then(a => { if (state.detail && state.sel === z.id && a) $('#dtitle').textContent = a; }).catch(() => {});
   }
@@ -630,7 +641,8 @@ function closeTimer() { $('#timer').hidden = true; }
 function renderTimer() {
   const z = timer ? byId.get(timer.zoneId) : timerZone;
   const running = !!timer;
-  const notify = load('pmm-notify', false);
+  const locked = Pro.gated(); // 通知は Pro の機能（販売前は無料のまま）
+  const notify = !locked && load('pmm-notify', false);
   $('#timer').innerHTML = `
     <div class="tin">
       <button class="round tclose" id="tclose" type="button" aria-label="閉じる">${I.down}</button>
@@ -648,7 +660,7 @@ function renderTimer() {
         <div><span>最大 · 料金</span><b>${z ? esc(`${fmtLimit(z) || '—'} · ${fmtFee(z) || '—'}`) : '—'}</b></div>
       </div>
       <div class="tnotify">
-        <label class="switch"><span>終わる10分前に知らせる</span><input type="checkbox" id="tnotify" role="switch"${notify ? ' checked' : ''}></label>
+        <label class="switch${locked ? ' locked' : ''}"><span>終わる10分前に知らせる${locked ? `<i class="lock" aria-label="Pro の機能">${svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>')}</i>` : ''}</span><input type="checkbox" id="tnotify" role="switch"${notify ? ' checked' : ''}${locked ? ' data-locked' : ''}></label>
         <small>ホーム画面に追加すると、画面を閉じていても届きます</small>
       </div>
       <div class="tbtns">
@@ -657,8 +669,10 @@ function renderTimer() {
       </div>
       <button class="btn sub big" type="button" id="tcar"${running ? '' : ' disabled'}>${I.pin}車の場所を確認</button>
       <p class="tfoot">メーター・チケットに表示された時刻が優先です</p>
+      ${Pro.adSlot('timer')}
     </div>`;
   updateTimer();
+  Pro.fillAds($('#timer'));
 }
 
 // 円と残り時間だけを書き換える（1秒ごと）
@@ -737,7 +751,7 @@ function askNotify() {
 // 終わる10分前に1回だけ知らせる（許可がないときは画面の表示だけ）
 function tickTimer() {
   if (!$('#timer').hidden) updateTimer();
-  if (!timer || timer.notified || !load('pmm-notify', false)) return;
+  if (!timer || timer.notified || Pro.gated() || !load('pmm-notify', false)) return;
   const left = timer.startedAt + timer.limitMin * 60000 - Date.now();
   if (left > 10 * 60000 || left <= 0) return;
   timer.notified = true;
@@ -784,7 +798,10 @@ function idlePanel() {
   const areas = PREFS.filter(p => n[p]).map(p => `<button class="chip" type="button" data-pref="${p}">${prefName(p)}</button>`).join('');
   const rec = recent().map((h, i) =>
     `<button type="button" class="qrow" data-recent="${i}">${I.clock}<span class="qt"><b>${esc(h.title)}</b></span></button>`).join('');
-  showPanel(`<h3>エリアへ移動</h3><div class="areas">${areas}</div>${rec ? `<h3>最近</h3>${rec}` : ''}`);
+  // 保存した行き先（Pro）を候補の上に
+  const saved = Pro.on ? Pro.favPlaces().slice(0, 10).map((p, i) =>
+    `<button type="button" class="qrow" data-saved="${i}">${I.flag}<span class="qt"><b>${esc(p.name)}</b></span></button>`).join('') : '';
+  showPanel(`${saved ? `<h3>保存した行き先</h3>${saved}` : ''}<h3>エリアへ移動</h3><div class="areas">${areas}</div>${rec ? `<h3>最近</h3>${rec}` : ''}`);
 }
 
 async function search(q) {
@@ -907,6 +924,7 @@ function bind() {
     if (!b) return;
     if (b.dataset.hit) setDest(hits[+b.dataset.hit]);
     else if (b.dataset.recent) setDest(recent()[+b.dataset.recent]);
+    else if (b.dataset.saved) { const p = Pro.favPlaces()[+b.dataset.saved]; if (p) setDest({ title: p.title || p.name, lat: p.lat, lng: p.lng }); }
     else if (b.dataset.pref) fitPref(b.dataset.pref);
   });
   document.addEventListener('click', e => {
@@ -923,11 +941,16 @@ function bind() {
     if (c && e.target === c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); select(c.dataset.id, { pan: true }); }
   });
   $('#dback').addEventListener('click', leaveDetail);
-  $('#dsheet').addEventListener('click', e => { if (e.target.closest('[data-close]')) leaveDetail(); });
+  $('#dsheet').addEventListener('click', e => {
+    if (e.target.closest('[data-close]')) leaveDetail();
+    const f = e.target.closest('[data-act="fav"]');
+    if (f) Pro.toggleFav(f.dataset.id);
+  });
   window.addEventListener('popstate', () => { if (state.detail) closeDetail(); });
   $('#goScrim').addEventListener('click', e => { if (e.target === $('#goScrim')) closeGo(); });
 
   $('#timerBtn').addEventListener('click', openTimer);
+  Pro.bind();
   $('#timer').addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;
@@ -938,6 +961,7 @@ function bind() {
   });
   $('#timer').addEventListener('change', e => {
     if (e.target.id !== 'tnotify') return;
+    if (e.target.hasAttribute('data-locked')) { e.target.checked = false; Pro.openBuy(); return; }
     save('pmm-notify', e.target.checked);
     if (e.target.checked) askNotify();
   });
@@ -953,7 +977,9 @@ function bind() {
 
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
-    if (!$('#goScrim').hidden) closeGo();
+    if (!$('#buyScrim').hidden) Pro.closeSheet();
+    else if (!$('#goScrim').hidden) closeGo();
+    else if (!$('#favSheet').hidden) Pro.closeFav();
     else if (!$('#timer').hidden) closeTimer();
     else if (!$('#qpanel').hidden) showPanel('');
     else if (state.detail) leaveDetail();
@@ -989,6 +1015,7 @@ async function boot() {
   // カードが出て見えている範囲が変わったので、現在地へ寄せ直す（まだ地図を触っていなければ）
   const target = autoCentered || startHere;
   if (target && !state.moved) centerOn(target, map.getZoom());
+  Pro.init(); // 購入証を確かめる（購入から戻ってきたときの確認も）
 }
 
 boot();

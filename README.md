@@ -19,6 +19,8 @@
 
 見た目は白い角丸のカードに薄い影。色は緑（使える）・赤（時間外）・グレー（時間不明）・黄（選んだ区間）だけです。
 
+**Pro（480円・買い切り）と広告**の仕組みも入っています（お気に入り・タイマーの通知・広告なし。[docs/pro-ads.md](docs/pro-ads.md)）。いまは `config.js` で止めてあり、公開中の画面には出ません。始める手順は docs/pro-ads.md §23。
+
 ## データ
 
 ### 東京（752区間）
@@ -113,8 +115,13 @@ index.html        画面
 app.js            アプリ本体（Leaflet）
 zones.js          GeoJSON をアプリの形にそろえる
 styles.css        スタイル（いつも明るい配色）
-config.js         設定（いまは使っていません）
+config.js         設定（Pro の販売・広告の開始、購入証の公開鍵、AdSense の ID）
 basemap.js        地図の下地（ベクトル地図）の配色とラベル
+pro.js            Pro・お気に入り・広告・「このアプリについて」
+functions/api/    Pro の API（Cloudflare Pages Functions：checkout・verify・restore）
+lib/pro-server.js Pro の API の共通部分（Stripe・購入証の署名・回数の記録）
+scripts/pro-keys.mjs  購入証の鍵（ECDSA P-256）を作る
+docs/drafts/      特定商取引法に基づく表記・プライバシーポリシーの下書き（公開前）
 data/zones.geojson  752区間（build/build.py が作る）
 data/holidays.json  祝日一覧（「いま使える」の判定に使う）
 build/            データを作るスクリプトと元データ

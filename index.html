@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="vendor/maplibre-gl.css?v=afb6efe2">
 <link rel="stylesheet" href="vendor/leaflet.css?v=ec929f11">
-<link rel="stylesheet" href="styles.css?v=faddf649">
+<link rel="stylesheet" href="styles.css?v=e64f3f3d">
 </head>
 <body>
 
@@ -34,6 +34,9 @@
     </div>
     <div class="qpanel" id="qpanel" hidden></div>
   </div>
+
+  <!-- 右上：お気に入りの一覧（Pro。販売前は出さない） -->
+  <button class="ctl favbtn" id="favBtn" type="button" aria-label="お気に入りの一覧" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" fill="currentColor"/></svg><i class="lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></i></button>
 
   <!-- 右下：地図の切り替え・現在地 -->
   <div class="mapctl" id="mapctl">
@@ -58,6 +61,20 @@
     <section class="gosheet" id="goSheet" role="dialog" aria-modal="true" aria-labelledby="goTitle"></section>
   </div>
 
+  <!-- お気に入りの一覧（下から。地図は暗くしない） -->
+  <section class="favsheet" id="favSheet" role="dialog" aria-label="お気に入り" hidden>
+    <div class="fgrip" aria-hidden="true"></div>
+    <div class="fhead"><h2>お気に入り</h2><button class="dclose" id="favClose" type="button" aria-label="閉じる"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="fbody" id="favBody"></div>
+  </section>
+
+  <!-- 購入・復元・「このアプリについて」（下から。地図は暗く） -->
+  <div class="scrim" id="buyScrim" hidden>
+    <section class="gosheet buysheet" id="buySheet" role="dialog" aria-modal="true" aria-labelledby="buyTitle"></section>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
   <!-- タイマー -->
   <section class="timer" id="timer" role="dialog" aria-modal="true" aria-label="タイマー" hidden></section>
 
@@ -69,12 +86,13 @@
   </div>
 </main>
 
-<script src="config.js?v=fe19f4af"></script>
+<script src="config.js?v=cb252ea5"></script>
 <script src="vendor/leaflet.js?v=5a640ff8"></script>
 <script src="vendor/maplibre-gl.js?v=ab00c849"></script>
 <script src="vendor/leaflet-maplibre-gl.js?v=e79b564d"></script>
 <script src="basemap.js?v=9b93e0b7"></script>
 <script src="zones.js?v=0a80f9b4"></script>
-<script src="app.js?v=ffe335a8"></script>
+<script src="pro.js?v=27a731bc"></script>
+<script src="app.js?v=3aa8cd33"></script>
 </body>
 </html>
