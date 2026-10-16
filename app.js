@@ -136,7 +136,7 @@ function setTiles() {
   map.attributionControl.removeAttribution(Basemap.ATTR);
   // 地図はいつも明るい配色（端末がダークテーマでも暗くしない。道・町名を読みやすくするため）
   if (useVector && Basemap.supported()) {
-    tiles = L.maplibreGL({ style: Basemap.style(false, baseKind === 'detail'), interactive: false, attributionControl: false });
+    tiles = L.maplibreGL({ style: Basemap.style(baseKind === 'detail'), interactive: false, attributionControl: false });
     tiles.addTo(map);
     map.attributionControl.addAttribution(Basemap.ATTR);
     watchVector(tiles);
