@@ -275,3 +275,86 @@ body.in-detail .top,body.in-detail .cards,body.in-detail .mapctl{display:none}
   .scrim{align-items:center}
   .gosheet{border-radius:24px;padding-bottom:18px}
 }
+
+/* ---------- Pro・お気に入り・広告・「このアプリについて」（docs/pro-ads.md） ---------- */
+/* 鍵の印（無料のときに Pro の機能に付ける） */
+.lock{position:absolute;right:3px;bottom:3px;width:15px;height:15px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-style:normal}
+.lock svg{width:9px;height:9px;stroke-width:2.6}
+.switch .lock{position:static;display:inline-grid;margin-left:6px;vertical-align:-2px}
+/* 右上の★ボタン（タイマーボタンの真下） */
+.favbtn{position:absolute;z-index:1000;right:16px;top:calc(12px + env(safe-area-inset-top) + 52px + 10px)}
+.favbtn > svg{width:22px;height:22px;color:var(--ink)}
+.favbtn:not(.locked) .lock{display:none}
+body.in-detail .favbtn{display:none}
+/* ☆（カード・詳細・行き先） */
+.cbtns.has-star{grid-template-columns:1fr 44px 1fr}
+.btn.star{position:relative;width:44px;padding:0;background:var(--chip-2)}
+.btn.star > svg{width:20px;height:20px}
+.btn.star.on > svg,.pstar.on > svg,.funfav > svg{fill:var(--ok);stroke:var(--ok)}
+.dtitle .dstar{flex:none;width:40px;height:40px;border-radius:50%;align-self:center}
+.desttag{display:inline-flex;align-items:center;gap:6px}
+.pstar{position:relative;flex:none;width:30px;height:30px;margin:-4px -6px -4px 0;border:0;border-radius:50%;background:transparent;display:grid;place-items:center;padding:0;color:var(--ink)}
+.pstar > svg{width:18px;height:18px}
+.pstar .lock{right:-2px;bottom:-2px;width:13px;height:13px}
+/* お気に入りの一覧（下から。地図は暗くしない） */
+.favsheet{position:fixed;z-index:1250;left:0;right:0;bottom:0;max-height:60vh;display:flex;flex-direction:column;background:var(--surface);border-radius:24px 24px 0 0;box-shadow:0 -4px 18px rgba(0,0,0,.16);padding:8px 0 env(safe-area-inset-bottom)}
+.fgrip{width:40px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 4px;flex:none}
+.fhead{display:flex;align-items:center;justify-content:space-between;padding:4px 16px 8px 20px;flex:none}
+.fhead h2{margin:0;font-size:18px;font-weight:700}
+.fhead .dclose{position:static}
+.fbody{overflow-y:auto;overscroll-behavior:contain;padding:0 8px 12px}
+.fbody h3{margin:12px 12px 4px;font-size:13px;font-weight:700;color:var(--muted)}
+.frow{display:flex;align-items:center;gap:4px;border-top:1px solid var(--line)}
+.fgo{flex:1;min-width:0;display:flex;align-items:center;gap:10px;min-height:64px;padding:8px 12px;border:0;background:transparent;text-align:left}
+.frow.place .fgo{min-height:56px}
+.fgo .cp{flex:none}
+.frow.ok .cp{background:var(--map-ok)}
+.frow.no .cp{background:var(--map-no)}
+.ft{flex:1;min-width:0;display:grid;gap:2px}
+.fn{display:flex;align-items:center;gap:8px;min-width:0}
+.fn b{font-size:16px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.fn .badge{flex:none;height:22px;font-size:12px}
+.ft small{font-size:13px;color:var(--muted)}
+.frow.no .fn b,.frow.unk .fn b{color:var(--ink-2)}
+.fp{flex:none;width:26px;height:26px;border-radius:50%;background:#1C1D1F;color:#fff;display:grid;place-items:center}
+.fp svg{width:14px;height:14px}
+.funfav{flex:none;width:44px;height:44px;border:0;background:transparent;display:grid;place-items:center;padding:0}
+.funfav svg{width:22px;height:22px}
+.fempty{margin:28px 16px 36px;text-align:center;font-size:14px;color:var(--muted)}
+@media (min-width:761px){ .favsheet{left:auto;right:16px;width:420px;bottom:16px;border-radius:24px} }
+/* 小さな札 */
+.toast{position:fixed;z-index:1500;left:50%;transform:translateX(-50%);bottom:calc(16px + var(--cards-h) + 14px + env(safe-area-inset-bottom));max-width:calc(100% - 32px);display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:12px;background:var(--ink);color:#fff;font-size:14px;box-shadow:var(--shadow-card)}
+.toast button{flex:none;border:0;background:transparent;color:#fff;font-weight:700;text-decoration:underline;padding:0}
+/* 購入・復元・このアプリについて */
+.buysheet{max-height:88vh;overflow-y:auto}
+.buysheet h3{margin:6px 0 0;font-size:13px;font-weight:700;color:var(--muted)}
+.blead{margin:-8px 0 0;font-size:15px;color:var(--ink-2)}
+.bfeat{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.bfeat li{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700}
+.bfeat svg{flex:none;width:20px;height:20px;color:var(--ok);stroke-width:2.6}
+.blink{justify-self:center;border:0;background:transparent;font-size:14px;font-weight:700;color:var(--ink-2);text-decoration:underline;padding:4px}
+.bnote{margin:0;text-align:center;font-size:13px;color:var(--muted)}
+.blegal{margin:0;display:flex;justify-content:center;flex-wrap:wrap;gap:6px 16px;font-size:12px}
+.blegal a{color:var(--muted)}
+.rform{display:grid;gap:10px}
+.rform label{font-size:14px;color:var(--ink-2)}
+.rform input{height:48px;border:1px solid var(--line);border-radius:var(--r-btn);background:var(--surface-2);padding:0 14px;font-size:16px}
+.rmsg{margin:0;min-height:1.5em;font-size:14px;color:var(--ink-2)}
+.arow{display:grid;gap:2px;width:100%;padding:14px 16px;border:0;border-radius:14px;background:var(--surface-2);text-align:left}
+.arow b{font-size:16px;font-weight:700}
+.arow small{font-size:13px;color:var(--muted)}
+.asrc{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:13px;color:var(--ink-2)}
+.asrc b{display:inline-block;min-width:3.5em;margin-right:6px;color:var(--ink)}
+.anote,.acontact{margin:0;font-size:13px;color:var(--ink-2)}
+.acontact a{color:var(--ink)}
+/* 「このアプリについて」の i（出典の左） */
+.aboutbtn{width:28px;height:28px;margin:-4px 2px -4px -2px;border:0;border-radius:50%;background:#fff;color:#1C1D1F;box-shadow:var(--shadow-ctl);font:700 15px/1 Georgia,serif;font-style:italic;vertical-align:middle;padding:0}
+/* 広告の枠（詳細・タイマーの一番下だけ。高さを固定して画面をずらさない） */
+.adbox{position:relative;height:118px;padding:18px 0 0;background:var(--surface-2);border-radius:var(--r-btn);overflow:hidden}
+.adlabel{position:absolute;top:3px;left:10px;font-size:11px;color:var(--muted)}
+.adoff{justify-self:end;margin-top:-8px;border:0;background:transparent;font-size:13px;color:var(--muted);text-decoration:underline;padding:4px 0}
+.tin .adoff{justify-self:end}
+/* 広い画面：検索欄の列は最大600pxなので、★ボタンもタイマーボタンの真下にそろえる */
+@media (min-width:761px){ .favbtn{right:auto;left:calc(var(--col-w) + 16px + min(600px, 100vw - var(--col-w) - 32px) - 52px)} }
+/* 広い画面：出典が左の列（カード）の下に回り込んで i ボタンが隠れないよう、地図の幅に収める */
+@media (min-width:761px){ .leaflet-control-attribution{max-width:calc(100vw - var(--col-w) - 80px)} }

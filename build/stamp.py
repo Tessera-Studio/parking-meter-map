@@ -11,7 +11,8 @@ import hashlib, re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-HTML = ROOT / 'index.html'
+# 画面の HTML（legal.html・privacy.html は公開したら対象になる。docs/pro-ads.md §18.3）
+PAGES = [ROOT / n for n in ('index.html', 'legal.html', 'privacy.html')]
 
 
 def stamp(m):
@@ -23,7 +24,10 @@ def stamp(m):
     return f'{attr}="{path}?v={v}"'
 
 
-html = HTML.read_text(encoding='utf-8')
-new = re.sub(r'(href|src)="((?!https?:)[^"?#]+\.(?:css|js))(?:\?v=[0-9a-f]+)?"', stamp, html)
-HTML.write_text(new, encoding='utf-8')
-print('\n'.join(re.findall(r'(?:href|src)="([^"]+\?v=[^"]+)"', new)))
+for page in PAGES:
+    if not page.exists():
+        continue
+    html = page.read_text(encoding='utf-8')
+    new = re.sub(r'(href|src)="((?!https?:)[^"?#]+\.(?:css|js))(?:\?v=[0-9a-f]+)?"', stamp, html)
+    page.write_text(new, encoding='utf-8')
+    print(page.name + ': ' + ' '.join(re.findall(r'(?:href|src)="([^"]+\?v=[^"]+)"', new)))
