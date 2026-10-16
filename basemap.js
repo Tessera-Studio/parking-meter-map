@@ -1,6 +1,6 @@
 /* 地図の下地（ベクトル地図）。OpenFreeMap の OpenMapTiles を、このアプリ用の色で描く。
    鍵は要らない。ラベルは地名・駅名・道路名だけにし、区間の線とPマークが主役になるよう色を抑える。
-   dark：ダークテーマの色にする。detail：「詳しい地図」（建物・施設名・細い道の名前も出す） */
+   いつも明るい配色。detail：「詳しい地図」（建物・施設名・細い道の名前も出す） */
 (function () {
   const ATTR = '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
 
@@ -9,11 +9,6 @@
       land: '#F2F1EE', park: '#E2E9DC', water: '#CBDBE6', building: '#E7E5E0', buildingLine: '#DCD9D3',
       minor: '#FFFFFF', major: '#FFFFFF', motorway: '#FFFFFF', casing: '#DEDBD5', rail: '#D2CFC9',
       label: '#6B6F75', labelStrong: '#3E4146', road: '#8C9096', waterLabel: '#6E8CA3', halo: '#F2F1EE',
-    },
-    dark: {
-      land: '#18191B', park: '#1C231E', water: '#111C25', building: '#222426', buildingLine: '#2A2C2F',
-      minor: '#2A2C30', major: '#33363B', motorway: '#3C4046', casing: '#18191B', rail: '#2C2E32',
-      label: '#8E9399', labelStrong: '#C3C7CC', road: '#7A7F86', waterLabel: '#5B7487', halo: '#18191B',
     },
   };
 
@@ -25,8 +20,8 @@
   const notTunnel = ['!=', ['get', 'brunnel'], 'tunnel'];
   const roadClass = list => ['all', ['match', ['get', 'class'], list, true, false], notTunnel];
 
-  function style(dark, detail) {
-    const c = PALETTE[dark ? 'dark' : 'light'];
+  function style(detail) {
+    const c = PALETTE.light;
     const text = (color, size) => ({ 'text-color': color, 'text-halo-color': c.halo, 'text-halo-width': 1.4 });
     const layers = [
       { id: 'land', type: 'background', paint: { 'background-color': c.land } },

@@ -125,7 +125,6 @@ const badge = s => (s.a === 'ok'
   : `<span class="badge ${s.a === 'no' ? 'no' : 'off'}">${esc(s.text)}</span>`);
 
 /* ---------- 地図 ---------- */
-const darkQ = window.matchMedia('(prefers-color-scheme: dark)');
 const narrow = () => window.innerWidth <= 760;
 
 let baseKind = 'simple';
@@ -135,18 +134,16 @@ let useVector = true;
 function setTiles() {
   if (tiles) map.removeLayer(tiles);
   map.attributionControl.removeAttribution(Basemap.ATTR);
-  const dark = darkQ.matches;
+  // 地図はいつも明るい配色（端末がダークテーマでも暗くしない。道・町名を読みやすくするため）
   if (useVector && Basemap.supported()) {
-    tiles = L.maplibreGL({ style: Basemap.style(dark, baseKind === 'detail'), interactive: false, attributionControl: false });
+    tiles = L.maplibreGL({ style: Basemap.style(baseKind === 'detail'), interactive: false, attributionControl: false });
     tiles.addTo(map);
     map.attributionControl.addAttribution(Basemap.ATTR);
     watchVector(tiles);
   } else {
     tiles = L.tileLayer(GSI_PALE.url, { attribution: GSI_PALE.attr, maxNativeZoom: 18, maxZoom: 21, detectRetina: true }).addTo(map);
   }
-  // 画像の地図しかないダークテーマでは、色を反転して暗くする（区間の線は別の層なのでそのまま）
-  document.body.classList.toggle('dim-tiles', dark && !(tiles instanceof L.MaplibreGL));
-  $('#map').style.background = dark ? '#18191B' : '#F2F1EE';
+  $('#map').style.background = '#F2F1EE';
   const b = $('#baseBtn');
   b.setAttribute('aria-pressed', baseKind === 'detail');
   b.setAttribute('aria-label', `地図の表示を切り替え（いまは${baseKind === 'detail' ? '詳しい地図' : 'シンプル'}）`);
@@ -208,7 +205,6 @@ function initMap() {
   map.attributionControl.setPosition('bottomright');
   map.attributionControl.addAttribution(SRC_ATTR);
   setTiles();
-  darkQ.addEventListener?.('change', () => { setTiles(); draw(); drawDest(); });
   layer = L.layerGroup().addTo(map);
   marks = L.layerGroup().addTo(map); // 行き先の印と円
   map.on('dragstart', () => { state.moved = true; quiet = false; });
@@ -221,7 +217,8 @@ function initMap() {
 const colors = () => {
   const cs = getComputedStyle(document.documentElement);
   const v = k => cs.getPropertyValue(k).trim();
-  return { ok: v('--ok'), no: v('--no'), off: v('--off'), pick: v('--pick'), edge: v('--pick-edge') };
+  // 地図の上に描く色（--map-*）。ダークテーマでも変えない
+  return { ok: v('--map-ok'), no: v('--map-no'), off: v('--map-off'), pick: v('--map-pick'), edge: v('--map-pick-edge'), ink: v('--map-pick-edge') };
 };
 
 // 区間の線とPマーク。重なり順は時間不明 → 赤 → 緑 → 選んだ区間
@@ -230,7 +227,6 @@ function draw() {
   if (!zones.length) return;
   layer.clearLayers();
   const col = colors();
-  const dark = darkQ.matches;
   const t = when();
   const zoom = map.getZoom();
   const small = zoom < SMALL_ZOOM;
@@ -253,11 +249,11 @@ function draw() {
     z.lines.forEach(l => {
       if (l.length < 2) return;
       if (sel) {
-        // 選んだ区間は状態に関係なく --pick。状態はPマークの色とカードのバッジで見せる
-        if (!dark) line(l, { color: col.edge, weight: 12 });
+        // 選んだ区間は状態に関係なく --map-pick（明るい地図の上なので、いつも黒い縁を付ける）。状態はPマークの色とカードのバッジで見せる
+        line(l, { color: col.edge, weight: 12 });
         line(l, { color: col.pick, weight: 8 });
       } else if (ok) {
-        if (!small && !dark) line(l, { color: '#fff', weight: 10 });
+        if (!small) line(l, { color: '#fff', weight: 10 });
         line(l, { color: c, weight: small ? 4 : 6 });
       } else {
         // 赤（時間外）・グレーの破線（時間不明）は、緑より細く
