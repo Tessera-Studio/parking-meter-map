@@ -2,7 +2,7 @@
   "name": "parking-meter-map",
   "version": "1.0.0",
   "private": true,
-  "description": "パーキング・メーター・マップ（iPhone・Android アプリ）",
+  "description": "メーターマップ（MeterMap）：パーキング・メーター区間の地図（iPhone・Android アプリ）",
   "scripts": {
     "build": "python3 build/stamp.py && node scripts/build-www.mjs",
     "sync": "npm run build && npx cap sync",

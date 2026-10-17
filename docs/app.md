@@ -1,11 +1,13 @@
 # iPhone・Android アプリ（Capacitor）
 
-パーキング・メーター・マップは **iPhone・Android のアプリだけ**で提供する（Web 版はやめる。2026-10-17 に決定）。
+メーターマップ（MeterMap。旧称：パーキング・メーター・マップ）は **iPhone・Android のアプリだけ**で提供する（Web 版はやめる。2026-10-17 に決定）。
 画面と判定のロジックは今までの Web の作り（`index.html`・`app.js` など）をそのまま使い、[Capacitor](https://capacitorjs.com/) でアプリに包む。
 
 | 項目 | 値 |
 |---|---|
 | アプリ名（ホーム画面） | メーターマップ（`capacitor.config.json` の appName、iOS の `CFBundleDisplayName`、Android の `app_name`） |
+| アプリ名（ストア） | メーターマップ（英語名 MeterMap）。2026-10-17 に決定 |
+| ドメイン | `metermap.jp`（取得予定。`tesseras.jp/metermap/` へ転送）。法定ページ・`app-ads.txt` は会社サイト `tesseras.jp` に置く |
 | アプリの ID（Bundle ID / applicationId） | `jp.tesseras.parkingmetermap` |
 | Capacitor | 8 |
 | iOS の依存の管理 | Swift Package Manager（CocoaPods は使わない） |

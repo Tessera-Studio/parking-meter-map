@@ -779,7 +779,7 @@ function tickTimer() {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   const z = byId.get(timer.zoneId);
   try {
-    new Notification('パーキング・メーター・マップ', { body: `${z ? zoneName(z) : ''}：あと${Math.ceil(left / 60000)}分で時間です（${hmOf(new Date(timer.startedAt + timer.limitMin * 60000))}まで）`, icon: 'icon.svg' });
+    new Notification('メーターマップ', { body: `${z ? zoneName(z) : ''}：あと${Math.ceil(left / 60000)}分で時間です（${hmOf(new Date(timer.startedAt + timer.limitMin * 60000))}まで）`, icon: 'icon.svg' });
   } catch (e) { /* 通知を出せない端末では画面の表示だけ */ }
 }
 
