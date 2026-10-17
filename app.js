@@ -506,8 +506,8 @@ function renderDetail(z) {
       <div>${I.yen}<b>${esc(fmtFee(z) || '—')}</b><span>料金</span></div>
     </div>
     ${hours(z, t)}
+    <div class="dacts"><h3>地図アプリで行き方を見る</h3>${navRows(z, true)}</div>
     <p class="note">${I.info}<span>時間外は、ほとんどの区間で駐車禁止です。現地の標識・メーターの表示が優先されます。</span></p>
-    <div class="dacts"><h3>地図アプリで経路を見る</h3>${navRows(z, true)}</div>
     ${more ? `<div class="dmore"><h3>区間の情報</h3><dl>${more}</dl></div>` : ''}
     <p class="src"><span class="badge off">${esc(srcTag)}</span><span>${esc(srcText)}${srcUrl ? ` <a href="${srcUrl}" target="_blank" rel="noopener">${esc(srcLink)}</a>` : ''}</span></p>
     ${Pro.adSlot('detail')}`;
