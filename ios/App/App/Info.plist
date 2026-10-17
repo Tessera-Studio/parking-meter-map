@@ -79,5 +79,9 @@
 	</array>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>あなたに合った広告を表示するために使います。許可しなくても、アプリはすべてお使いいただけます。</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>comgooglemaps</string>
+	</array>
 </dict>
 </plist>
