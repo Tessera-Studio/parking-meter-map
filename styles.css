@@ -296,10 +296,10 @@ body.in-detail .top,body.in-detail .cards,body.in-detail .mapctl{display:none}
 .lock svg{width:9px;height:9px;stroke-width:2.6}
 .switch .lock{position:static;display:inline-grid;margin-left:6px;vertical-align:-2px}
 /* 右上の★ボタン（タイマーボタンの真下） */
-.favbtn{position:absolute;z-index:1000;right:16px;top:calc(12px + env(safe-area-inset-top) + 52px + 10px)}
+.favbtn,.timerbtn{position:relative}
 .favbtn > svg{width:22px;height:22px;color:var(--ink)}
 .favbtn:not(.locked) .lock{display:none}
-body.in-detail .favbtn{display:none}
+.favbtn[hidden]{display:none}
 /* ☆（カード・詳細・行き先） */
 .cbtns.has-star{grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr)}
 .btn.star{position:relative;width:44px;padding:0;background:var(--chip-2)}
@@ -347,6 +347,19 @@ body.in-detail .favbtn{display:none}
 .bfeat li{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700}
 .bfeat svg{flex:none;width:20px;height:20px;color:var(--ok);stroke-width:2.6}
 .blink{justify-self:center;border:0;background:transparent;font-size:14px;font-weight:700;color:var(--ink-2);text-decoration:underline;padding:4px}
+.uhead{display:flex;align-items:center;gap:12px}
+.uhead h2{font-size:19px}
+.uhead .blead{margin:2px 0 0;font-size:14px}
+.uicon{flex:none;width:48px;height:48px;border-radius:14px;background:var(--ok);color:var(--on-ok);display:grid;place-items:center}
+.uicon svg{width:26px;height:26px}
+.ufeat{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.ufeat li{display:flex;align-items:flex-start;gap:10px}
+.ufeat svg{flex:none;width:20px;height:20px;margin-top:1px;color:var(--ok);stroke-width:2.6}
+.ufeat div{display:grid;gap:1px}
+.ufeat b{font-size:15px;font-weight:700}
+.ufeat span{font-size:13px;line-height:1.5;color:var(--ink-2)}
+.uplan{margin:0;padding:10px 12px;border-radius:12px;background:var(--surface-2);font-size:13px;line-height:1.55;color:var(--ink-2)}
+.uplan b{color:var(--ink)}
 .bnote{margin:0;text-align:center;font-size:13px;color:var(--muted)}
 .blegal{margin:0;display:flex;justify-content:center;flex-wrap:wrap;gap:6px 16px;font-size:12px}
 .blegal a{color:var(--muted)}
@@ -367,7 +380,6 @@ body.in-detail .favbtn{display:none}
 .adoff{justify-self:end;margin-top:-8px;border:0;background:transparent;font-size:13px;color:var(--muted);text-decoration:underline;padding:4px 0}
 .tin .adoff{justify-self:end}
 /* 広い画面：検索欄の列は最大600pxなので、★ボタンもタイマーボタンの真下にそろえる */
-@media (min-width:761px){ .favbtn{right:auto;left:calc(var(--col-w) + 16px + min(600px, 100vw - var(--col-w) - 32px) - 52px)} }
 
 /* 「？」ボタン（右上） */
 .helpbtn{font:700 24px/1 var(--f-body);color:var(--ink)}
