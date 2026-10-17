@@ -508,9 +508,8 @@ function renderDetail(z) {
     <div class="dacts"><h3>地図アプリで行き方を見る</h3>${navRows(z, true)}</div>
     <p class="note">${I.info}<span>時間外は、ほとんどの区間で駐車禁止です。現地の標識・メーターの表示が優先されます。</span></p>
     ${more ? `<div class="dmore"><h3>区間の情報</h3><dl>${more}</dl></div>` : ''}
-    <p class="src"><span class="badge off">${esc(srcTag)}</span><span>${esc(srcText)}${srcUrl ? ` <a href="${srcUrl}" target="_blank" rel="noopener">${esc(srcLink)}</a>` : ''}</span></p>
-    ${Pro.adSlot('detail')}`;
-  Pro.fillAds($('#dsheet'));
+    <p class="src"><span class="badge off">${esc(srcTag)}</span><span>${esc(srcText)}${srcUrl ? ` <a href="${srcUrl}" target="_blank" rel="noopener">${esc(srcLink)}</a>` : ''}</span></p>`;
+  Pro.syncAds();
   if (!z.addr && !addrCache.has(z.id)) {
     address(z).then(a => { if (state.detail && state.sel === z.id && a) $('#dtitle').textContent = a; }).catch(() => {});
   }
@@ -542,6 +541,7 @@ function closeDetail() {
   state.detail = false;
   $('#detail').hidden = true;
   document.body.classList.remove('in-detail');
+  Pro.syncAds();
   const id = state.sel;
   if (state.dest) renderCards(); else renderCards(byId.get(id));
   select(id, { scroll: false });
@@ -586,6 +586,7 @@ function startGo(z) {
     <label class="check"><input type="checkbox" id="navRemember" checked>次からはこの地図ですぐ開く</label>
     <button class="cancel" type="button" id="goCancel">やめる</button>`;
   $('#goScrim').hidden = false;
+  Pro.syncAds();
   $('#goSheet').querySelector('.nav').focus();
   $('#goSheet').onclick = e => {
     const n = e.target.closest('[data-nav]');
@@ -596,7 +597,7 @@ function startGo(z) {
     } else if (e.target.closest('#goCancel')) closeGo();
   };
 }
-function closeGo() { $('#goScrim').hidden = true; }
+function closeGo() { $('#goScrim').hidden = true; Pro.syncAds(); }
 
 /* ---------- タイマー ---------- */
 let timer = load('pmm-timer', null); // { zoneId, startedAt, limitMin, carLatLng, notified }
@@ -650,9 +651,10 @@ function openTimer(z) {
   renderTimer();
   $('#timer').hidden = false;
   $('#timerScrim').hidden = false; // 開いているあいだは、ほかのボタン・地図を押せないようにする
+  Pro.syncAds();
   $('#tclose').focus();
 }
-function closeTimer() { $('#timer').hidden = true; $('#timerScrim').hidden = true; }
+function closeTimer() { $('#timer').hidden = true; $('#timerScrim').hidden = true; Pro.syncAds(); }
 
 function renderTimer() {
   const z = timer ? byId.get(timer.zoneId) : timerZone;
@@ -685,10 +687,9 @@ function renderTimer() {
       </div>
       <button class="btn sub big" type="button" id="tcar"${running ? '' : ' disabled'}>${I.pin}車の場所を確認</button>
       <p class="tfoot">メーター・チケットに表示された時刻が優先です</p>
-      ${Pro.adSlot('timer')}
     </div>`;
   updateTimer();
-  Pro.fillAds($('#timer'));
+  Pro.syncAds();
 }
 
 // 円と残り時間だけを書き換える（1秒ごと）

@@ -176,7 +176,7 @@ svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-lin
 /* ---------- 区間の詳細 ---------- */
 .detail{position:absolute;z-index:1200;inset:0;pointer-events:none}
 .detail > *{pointer-events:auto}
-.dsheet{position:absolute;left:0;right:0;bottom:0;max-height:calc(100% - 72px - env(safe-area-inset-top));overflow-y:auto;overscroll-behavior:contain;background:var(--surface);border-radius:24px 24px 0 0;box-shadow:0 -4px 18px rgba(0,0,0,.12);padding:16px 18px calc(16px + env(safe-area-inset-bottom));display:grid;gap:10px;align-content:start}
+.dsheet{position:absolute;left:0;right:0;bottom:0;max-height:calc(100% - 72px - env(safe-area-inset-top));overflow-y:auto;overscroll-behavior:contain;background:var(--surface);border-radius:24px 24px 0 0;box-shadow:0 -4px 18px rgba(0,0,0,.12);padding:16px 18px calc(16px + env(safe-area-inset-bottom) + var(--ad-h, 0px));display:grid;gap:10px;align-content:start}
 .dhead{position:relative;display:grid;gap:0;padding-right:48px}
 /* 詳細を閉じる「×」（右上） */
 .dclose{position:absolute;top:-2px;right:-4px;width:40px;height:40px;border:0;border-radius:50%;background:var(--chip-2);color:var(--ink);display:grid;place-items:center;padding:0}
@@ -403,11 +403,7 @@ body.in-detail .top,body.in-detail .cards,body.in-detail .mapctl{display:none}
 .anote,.acontact{margin:0;font-size:13px;color:var(--ink-2)}
 .acontact a{color:var(--ink)}
 /* 広告の枠（詳細・タイマーの一番下だけ。高さを固定して画面をずらさない） */
-.adbox{position:relative;height:118px;padding:18px 0 0;background:var(--surface-2);border-radius:var(--r-btn);overflow:hidden}
-.adlabel{position:absolute;top:3px;left:10px;font-size:11px;color:var(--muted)}
-.adoff{justify-self:end;margin-top:-8px;border:0;background:transparent;font-size:13px;color:var(--muted);text-decoration:underline;padding:4px 0}
-.tin .adoff{justify-self:end}
-/* 広い画面：検索欄の列は最大600pxなので、★ボタンもタイマーボタンの真下にそろえる */
+.tin /* 広い画面：検索欄の列は最大600pxなので、★ボタンもタイマーボタンの真下にそろえる */
 
 /* 「？」ボタン（右上） */
 .helpbtn{font:700 24px/1 var(--f-body);color:var(--ink)}
