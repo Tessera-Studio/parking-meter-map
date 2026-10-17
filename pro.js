@@ -251,65 +251,90 @@
   // 特定商取引法の表記・プライバシーポリシーは、販売を始めるときに公開する（それまではリンクを出さない）
   const legalLinks = () => !CFG.proEnabled ? '' : '<p class="blegal"><a href="legal.html" target="_blank" rel="noopener">特定商取引法に基づく表記</a><a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a></p>';
   function openSheet(html) {
+    $('#buySheet').classList.remove('prosheet');
     $('#buySheet').innerHTML = html;
     $('#buyScrim').hidden = false;
   }
   P.closeSheet = () => { $('#buyScrim').hidden = true; };
 
-  P.openBuy = function () {
-    if (!P.shown) return;
-    if (P.on) return P.toast('有料プランをご利用中です');
-    openSheet(`
-      <h2 id="buyTitle">パーキング・メーター・マップ Pro</h2>
-      <p class="blead">1回のお支払いで、ずっと使えます</p>
-      <ul class="bfeat">
-        <li>${I.check}タイマー（残り時間・終わる10分前の通知・車の場所）</li>
-        <li>${I.check}お気に入り（よく使う区間・行き先を保存）</li>
-        <li>${I.check}広告が出なくなります</li>
-      </ul>
-      <button class="btn go big" type="button" data-buy>有料プランを購入（${PRICE}）</button>
-      <button class="blink" type="button" data-restore>購入済みの方はこちら（復元）</button>
-      <button class="cancel" type="button" data-cancel>やめる</button>
-      <p class="bnote">地図と時間の表示は、これまでどおり無料です。</p>
-      ${legalLinks()}`);
-    $('#buySheet [data-buy]').focus({ preventScroll: true });
+  // 有料プランのシート（「？」の購入・広告を消す・鍵の付いた機能から）。紺の帯に機能の見本、機能、値段、購入の順
+  const PI = {
+    bell: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5h4"/></svg>',
+    noad: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6" width="17" height="12" rx="2"/><path d="M4 4l16 16"/></svg>',
+    x: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+    lock: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
   };
-
-  // 無料のときにタイマー・お気に入りを押したら：その機能とよいところを説明して、購入へ
-  const UPSELL = {
+  const DEMO = {
+    timer: '<i class="udemo" aria-hidden="true"><svg viewBox="0 0 72 72"><circle class="bg" cx="36" cy="36" r="31"/><circle class="fg" cx="36" cy="36" r="31" stroke-dasharray="194.8" stroke-dashoffset="58"/></svg><span><small>あと</small><b>25分</b></span></i>',
+    fav: `<i class="udemo star" aria-hidden="true">${STAR}</i>`,
+    pro: '<i class="udemo app" aria-hidden="true">P</i>',
+  };
+  // I（アイコン）は app.js で作るので、開いたときに組み立てる
+  const UPSELL = () => ({
+    pro: {
+      title: 'もっと便利に、<br>戻り遅れなく',
+      lead: '1回のお支払いで、ずっと使えます',
+      feats: [
+        [I.timer, 'タイマー', '残り時間を右下に表示。終わる10分前に通知し、車の場所にも戻れます。'],
+        [STAR, 'お気に入り', 'よく使う区間と行き先を保存。いま使えるかも一覧で分かります。'],
+        [PI.noad, '広告なし', '詳細・タイマーの広告が出なくなります。'],
+      ],
+    },
     timer: {
       title: 'タイマー',
       lead: '停めた時刻から、最大時間までの残りを数えます',
-      icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 13l3-3M9.5 2.5h5"/></svg>',
       feats: [
-        ['残り時間がひと目で分かる', '地図の右下のボタンに「あと 25分」。残り10分を切ると赤に変わります。'],
-        ['終わる10分前に通知', '画面を閉じていても知らせるので、戻り遅れを防げます。'],
-        ['車の場所にすぐ戻れる', '停めた場所を覚えておき、ボタンひとつで地図を戻します。'],
+        [I.timer, '残り時間がひと目で分かる', '右下のボタンに「あと 25分」。残り10分を切ると赤に変わります。'],
+        [PI.bell, '終わる10分前に通知', '画面を閉じていても知らせるので、戻り遅れを防げます。'],
+        [I.car, '車の場所にすぐ戻れる', '停めた場所を覚えておき、ボタンひとつで地図を戻します。'],
       ],
     },
     fav: {
       title: 'お気に入り',
       lead: 'よく使う区間と行き先を保存できます',
-      icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" fill="currentColor"/></svg>',
       feats: [
-        ['いつもの区間をすぐ呼び出せる', '詳細の☆で保存。右下の★から一覧を開き、押すだけでその区間へ。'],
-        ['いまの状態も一覧で分かる', '保存した区間が、いま使えるか・何時までかを一覧に表示します。'],
-        ['行き先も保存', '職場・取引先など、よく行く場所を10件まで保存できます。'],
+        [STAR, 'いつもの区間をすぐ呼び出せる', '詳細の☆で保存。右下の★から一覧を開き、押すだけでその区間へ。'],
+        [I.clock, 'いまの状態も一覧で分かる', '保存した区間が、いま使えるか・何時までかを一覧に表示します。'],
+        [I.pin, '行き先も保存', '職場・取引先など、よく行く場所を10件まで保存できます。'],
       ],
     },
+  });
+  function proSheet(kind) {
+    const u = UPSELL()[kind];
+    const incl = [['timer', 'タイマー'], ['fav', 'お気に入り'], ['ads', '広告なし']];
+    openSheet(`
+      <div class="uhero">
+        <button class="uclose" type="button" data-cancel aria-label="閉じる">${PI.x}</button>
+        <div>
+          <span class="ukick">${PI.lock}有料プラン</span>
+          <h2 id="buyTitle">${u.title}</h2>
+          <p>${u.lead}</p>
+        </div>
+        ${DEMO[kind]}
+      </div>
+      <ul class="ufeat">${u.feats.map(([ic, b, t]) => `<li><i aria-hidden="true">${ic}</i><div><b>${b}</b><span>${t}</span></div></li>`).join('')}</ul>
+      <div class="uprice">
+        <p><b>${PRICE}</b><span>買い切り・月額なし</span></p>
+        <ul aria-label="有料プランに含まれるもの">${incl.map(([k, t]) => `<li${k === kind ? ' class="cur"' : ''}>${I.check}${t}</li>`).join('')}</ul>
+      </div>
+      <button class="btn brand big" type="button" data-buy>${PRICE}で購入する</button>
+      <p class="bnote">地図と時間の表示は、これまでどおり無料です</p>
+      <button class="blink" type="button" data-restore>購入済みの方はこちら（復元）</button>
+      ${legalLinks()}`);
+    $('#buySheet').classList.add('prosheet');
+    $('#buySheet [data-buy]').focus({ preventScroll: true });
+  }
+
+  P.openBuy = function () {
+    if (!P.shown) return;
+    if (P.on) return P.toast('有料プランをご利用中です');
+    proSheet('pro');
   };
+
+  // 無料のときにタイマー・お気に入りを押したら：その機能とよいところを説明して、購入へ
   P.openUpsell = function (kind) {
     if (!P.shown || P.on) return;
-    const u = UPSELL[kind];
-    openSheet(`
-      <div class="uhead"><i class="uicon" aria-hidden="true">${u.icon}</i><div><h2 id="buyTitle">${u.title}は有料プランの機能です</h2><p class="blead">${u.lead}</p></div></div>
-      <ul class="ufeat">${u.feats.map(([b, t]) => `<li>${I.check}<div><b>${b}</b><span>${t}</span></div></li>`).join('')}</ul>
-      <p class="uplan">有料プランでは、タイマーとお気に入りの両方が使え、広告も出なくなります。<b>${PRICE}・買い切り</b>（月額ではありません）。</p>
-      <button class="btn go big" type="button" data-buy>有料プランを購入</button>
-      <button class="blink" type="button" data-restore>購入済みの方はこちら（復元）</button>
-      <button class="cancel" type="button" data-cancel>やめる</button>
-      ${legalLinks()}`);
-    $('#buySheet [data-buy]').focus({ preventScroll: true });
+    proSheet(kind);
   };
 
   P.openRestore = function () {
