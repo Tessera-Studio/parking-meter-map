@@ -1,0 +1,20 @@
+{
+  "name": "parking-meter-map",
+  "version": "1.0.0",
+  "private": true,
+  "description": "パーキング・メーター・マップ（iPhone・Android アプリ）",
+  "scripts": {
+    "build": "python3 build/stamp.py && node scripts/build-www.mjs",
+    "sync": "npm run build && npx cap sync",
+    "ios": "npm run sync && npx cap open ios",
+    "android": "npm run sync && npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.5.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.3"
+  }
+}
