@@ -65,7 +65,7 @@ Android Studio で、右上のエミュレーター（Pixel など）を選ん�
 
 **まずは iPhone 版から**仕上げる（2026-10-17 に決定）。Android はそのあと。
 
-1. **いまの段階**：雛形。Web の画面がそのままアプリで動く
+1. **いまの段階**：雛形。Web の画面がそのままアプリで動く（有料プランの★・タイマーは鍵付きで見え、購入は「準備中」。`config.js` の `proShown: true`）
 2. 有料プランをストアの購入に（RevenueCat。App Store / Google Play）。Stripe・Cloudflare の仕組み（`functions/`・`lib/`・`scripts/pro-keys.mjs`）と、メールでの復元はやめる。仕様は docs/pro-ads.md を書き直す
 3. タイマーの通知を、アプリの通知（@capacitor/local-notifications）に
 4. 「ここへ行く」で地図アプリを確実に開く（@capacitor/app-launcher など）
