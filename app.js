@@ -562,10 +562,20 @@ const NAVS = () => (isApple() ? [['apple', 'Apple マップ'], ['google', 'Googl
 const navRows = (z, link) => `<div class="navs">${NAVS().map(([k, label]) => {
   const inner = `${I.map}<span>${label}</span><span class="chev">${I.chev}</span>`;
   return link
-    ? `<a class="nav" href="${navUrl(k, z)}" target="_blank" rel="noopener">${inner}</a>`
+    ? `<a class="nav" href="${navUrl(k, z)}" target="_blank" rel="noopener" data-navlink="${k}">${inner}</a>`
     : `<button class="nav" type="button" data-nav="${k}">${inner}</button>`;
 }).join('')}</div>`;
-const openNav = (kind, z) => window.open(navUrl(kind, z), '_blank', 'noopener');
+// アプリでは地図アプリを直接開く（@capacitor/app-launcher）。Apple は maps://、Google はアプリが入っていれば comgooglemaps://、なければ Web の Google マップ
+const appLauncher = window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && Capacitor.Plugins && Capacitor.Plugins.AppLauncher || null;
+async function openNav(kind, z) {
+  if (!appLauncher) { window.open(navUrl(kind, z), '_blank', 'noopener'); return; }
+  const [lat, lng] = z.center;
+  try {
+    if (kind === 'apple') return void await appLauncher.openUrl({ url: `maps://?daddr=${lat},${lng}&dirflg=d` });
+    const { value } = await appLauncher.canOpenUrl({ url: 'comgooglemaps://' });
+    await appLauncher.openUrl({ url: value ? `comgooglemaps://?daddr=${lat},${lng}&directionsmode=driving` : navUrl('google', z) });
+  } catch (e) { window.open(navUrl(kind, z), '_blank', 'noopener'); }
+}
 
 function startGo(z) {
   if (!z) return;
@@ -993,6 +1003,9 @@ function bind() {
   });
   $('#dsheet').addEventListener('click', e => {
     if (e.target.closest('[data-close]')) leaveDetail();
+    // 詳細の地図アプリの2行：アプリでは地図アプリを直接開く（ブラウザではリンクのまま）
+    const nl = e.target.closest('[data-navlink]');
+    if (nl && appLauncher) { e.preventDefault(); const z = byId.get(state.sel); if (z) openNav(nl.dataset.navlink, z); }
     const f = e.target.closest('[data-act="fav"]');
     if (f) Pro.toggleFav(f.dataset.id);
   });

@@ -207,9 +207,10 @@ Pro（お気に入り・タイマーの通知）と広告・「このアプリ�
   - 「やめる」
 - 選んだ地図を `localStorage` に覚え、2回目からはシートを出さずに直接開く。
 - 並び：iPhone/iPad は Apple を上、それ以外は Google を上（§7 の2行も同じ）。
-- 開くURL（目的地は区間の `z.center`）：
-  - Google：`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`
-  - Apple：`https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d`
+- 開くURL（目的地は区間の `z.center`）。アプリでは地図アプリを直接開く（@capacitor/app-launcher。§7 の2行も同じ）：
+  - Apple：`maps://?daddr=${lat},${lng}&dirflg=d`（Apple マップのアプリ）
+  - Google：Google マップのアプリが入っていれば `comgooglemaps://?daddr=${lat},${lng}&directionsmode=driving`、入っていなければ `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`（Safari で開く）。アプリの有無を確かめるため、`Info.plist` の `LSApplicationQueriesSchemes` に `comgooglemaps`
+  - ブラウザで開いたとき（確認用）は、Google は上の https、Apple は `https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d`
 - カードのボタンは「ここへ行く」のまま切り替えない。
 
 ## 9. タイマー
@@ -283,6 +284,7 @@ Pro（お気に入り・タイマーの通知）と広告・「このアプリ�
 - カードを「場所／利用時間・最大時間・料金・除外日（アイコン付き）／ボタン」の3段にし、横のまん中にそろえた。タイマーは右下（現在地の上）のボタンに戻し、開いているあいだはほかを押せないようにした。
 - カードのボタンを「ここへ行く」「詳細」の2つに戻し、お気に入りの星を区間名の右に（見せるだけ。登録は詳細の☆で）。登録済みの星は黒に。
 - 詳細の並びを「利用できる時間 → 地図アプリで行き方を見る → 注意 → 区間の情報・出典」に（見出しを「行き方を見る」に）。
+- 「ここへ行く」・詳細の地図アプリの2行で、Apple マップ・Google マップのアプリを直接開くように。
 - タイマーの通知を iPhone の通知に（10分前と時間になったときを予約）。
 - お気に入りの★を右下（タイマーの上）に。タイマーとお気に入りを有料プランの機能にし、無料のときは押すと説明と「有料プランを購入」のシート。
 - 詳細の並びを「利用できる時間・注意 → 地図アプリで経路を見る → 区間の情報・出典」に。

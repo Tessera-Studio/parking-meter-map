@@ -96,7 +96,7 @@ Android Studio で、右上のエミュレーター（Pixel など）を選ん�
 1. **いまの段階**：雛形。Web の画面がそのままアプリで動く（有料プランの★・タイマーは鍵付きで見え、購入は「準備中」。`config.js` の `proShown: true`）
 2. ~~有料プランをストアの購入に~~（済み：StoreKit 2・@capgo/native-purchases。Stripe・Cloudflare の仕組みとメールでの復元はやめた。docs/pro-ads.md §15.6）。残り：App Store Connect に商品を登録して、Sandbox の Apple ID で実機で試す（docs/pro-ads.md §23）
 3. ~~タイマーの通知を、アプリの通知に~~（済み）
-4. 「ここへ行く」で地図アプリを確実に開く（@capacitor/app-launcher など）
+4. ~~「ここへ行く」で地図アプリを確実に開く~~（済み：@capacitor/app-launcher。シミュレーターには Google マップのアプリがないので、Google は Safari で開く）
 5. アイコン・起動画面（@capacitor/assets）
 6. Web 版をやめる：GitHub の **Settings → Pages** で公開を止める
 7. App Store・Google Play への申請（ストアの説明文・スクリーンショット・プライバシーの申告）
