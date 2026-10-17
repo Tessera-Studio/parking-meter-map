@@ -313,7 +313,7 @@ function cardHtml(r, i, n) {
   const ex = unk ? '現地で確認' : exclusions(z) || 'なし';
   return `
     <article class="card ${s.a}${z.id === state.sel ? ' sel' : ''}" data-id="${esc(z.id)}" tabindex="0" aria-label="${esc(`${zoneName(z)}、${s.text}、${i + 1}件目／${n}件`)}">
-      <div class="chead"><i class="cp" aria-hidden="true">P</i><span class="cname">${esc(zoneName(z))}</span>${fmtFee(z) ? `<span class="cfee" aria-label="料金 ${esc(fmtFee(z))}">${esc(fmtFee(z))}</span>` : ''}</div>
+      <div class="chead"><i class="cp" aria-hidden="true">P</i><span class="cname">${esc(zoneName(z))}</span>${fmtFee(z) ? `<span class="cfee" aria-label="料金 ${esc(fmtFee(z))}">${I.yen}${esc(fmtFee(z))}</span>` : ''}</div>
       <div class="cinfo">
         <div>${I.clock}<b>${esc(unk ? '現地で確認' : z.hours)}</b><span>利用時間</span></div>
         <div>${I.timer}<b>${esc(fmtLimit(z) || '—')}</b><span>最大時間</span></div>
