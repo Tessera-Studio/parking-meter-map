@@ -1,0 +1,10 @@
+{
+  "appId": "jp.tesseras.parkingmeter",
+  "appName": "パーキング・メーター・マップ",
+  "webDir": "www",
+  "backgroundColor": "#ECEAE4",
+  "ios": { "contentInset": "never" },
+  "plugins": {
+    "LocalNotifications": { "iconColor": "#1E7F4A" }
+  }
+}

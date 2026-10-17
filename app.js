@@ -738,6 +738,7 @@ function startTimer() {
   timer = { zoneId: z.id, startedAt: Date.now(), limitMin: z.limitMin || 60, carLatLng: state.here || z.center, notified: false };
   save('pmm-timer', timer);
   if (load('pmm-notify', false)) askNotify();
+  scheduleNotify();
   renderTimer();
   showTimerState();
 }
@@ -745,6 +746,7 @@ function stopTimer() {
   timerZone = timer ? byId.get(timer.zoneId) : timerZone;
   timer = null;
   save('pmm-timer', null);
+  scheduleNotify();
   renderTimer();
   showTimerState();
 }
@@ -768,13 +770,14 @@ function showTimerState() {
   }
 }
 function askNotify() {
+  if (window.Native) return;  // アプリ版は預けるときに許可を求める（scheduleNotify）
   if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch?.(() => {});
 }
 // 終わる10分前に1回だけ知らせる（許可がないときは画面の表示だけ）
 function tickTimer() {
   if (!$('#timer').hidden) updateTimer();
   updateCardTimers();
-  if (!timer || timer.notified || Pro.gated() || !load('pmm-notify', false)) return;
+  if (!timer || timer.notified || window.Native || Pro.gated() || !load('pmm-notify', false)) return;
   const left = timer.startedAt + timer.limitMin * 60000 - Date.now();
   if (left > 10 * 60000 || left <= 0) return;
   timer.notified = true;
@@ -784,6 +787,19 @@ function tickTimer() {
   try {
     new Notification('パーキング・メーター・マップ', { body: `${z ? zoneName(z) : ''}：あと${Math.ceil(left / 60000)}分で時間です（${hmOf(new Date(timer.startedAt + timer.limitMin * 60000))}まで）`, icon: 'icon.svg' });
   } catch (e) { /* 通知を出せない端末では画面の表示だけ */ }
+}
+
+// アプリ版（native.js）：通知を OS に預けておく。アプリを閉じていても、終わる10分前と時間切れに届く
+function scheduleNotify() {
+  if (!window.Native) return;
+  if (!timer || Pro.gated() || !load('pmm-notify', false)) { Native.schedule([]); return; }
+  const z = byId.get(timer.zoneId);
+  const name = z ? zoneName(z) : '';
+  const end = timer.startedAt + timer.limitMin * 60000;
+  Native.schedule([
+    { at: end - 10 * 60000, body: `${name}：あと10分で時間です（${hmOf(new Date(end))}まで）` },
+    { at: end, body: `${name}：時間になりました（${hmOf(new Date(end))}まで）` },
+  ]);
 }
 
 /* ---------- 見直し ---------- */
@@ -987,6 +1003,7 @@ function bind() {
     if (e.target.hasAttribute('data-locked')) { e.target.checked = false; Pro.openBuy(); return; }
     save('pmm-notify', e.target.checked);
     if (e.target.checked) askNotify();
+    scheduleNotify();
   });
 
   $('#locate').addEventListener('click', () => {

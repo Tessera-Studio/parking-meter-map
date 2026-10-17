@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">パーキング・メーター・マップ</string>
+    <string name="title_activity_main">パーキング・メーター・マップ</string>
+    <string name="package_name">jp.tesseras.parkingmeter</string>
+    <string name="custom_url_scheme">jp.tesseras.parkingmeter</string>
+</resources>

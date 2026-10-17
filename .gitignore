@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 *.osm.pbf
+
+node_modules/
+www/
