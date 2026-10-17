@@ -33,6 +33,9 @@
   --f-body:"Zen Kaku Gothic New","Hiragino Sans",system-ui,sans-serif;
   --col-w:400px;
   --card-w:330px;
+  /* カードの幅と、カードを横のまん中にそろえる左右の余白（両どなりのカードが少し見える） */
+  --cw:min(var(--card-w),calc(100vw - 48px));
+  --side:calc((100vw - var(--cw)) / 2);
   --cards-h:190px;
   color-scheme:light;
 }
@@ -97,11 +100,11 @@ svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-lin
 .cards > *{pointer-events:auto}
 .desttag{justify-self:start;display:inline-block;margin:0 0 10px 16px;padding:6px 12px;background:var(--surface);border-radius:10px;box-shadow:var(--shadow-ctl);font-size:14px;color:var(--ink-2);max-width:calc(100% - 32px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .desttag b{color:var(--ink);font-weight:700}
-.track{display:flex;gap:10px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scroll-padding-left:16px;padding:6px 16px 12px;scrollbar-width:none}
+.track{display:flex;gap:10px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;padding:6px 0 12px var(--side);scrollbar-width:none}
 .track::-webkit-scrollbar{display:none}
-.track::after{content:"";flex:0 0 max(1px,calc(100vw - var(--card-w) - 36px))}
+.track::after{content:"";flex:0 0 max(1px,calc(var(--side) - 10px))}
 
-.card{flex:0 0 min(var(--card-w),calc(100vw - 48px));scroll-snap-align:start;display:grid;align-content:start;gap:6px;padding:14px;max-height:180px;overflow:hidden;background:var(--surface);border-radius:var(--r-card);box-shadow:var(--shadow-card);text-align:left;cursor:pointer}
+.card{flex:0 0 var(--cw);scroll-snap-align:center;display:grid;align-content:start;gap:6px;padding:14px;max-height:180px;overflow:hidden;background:var(--surface);border-radius:var(--r-card);box-shadow:var(--shadow-card);text-align:left;cursor:pointer}
 /* カード（4行）：Pと区間名とバッジ／種類・距離・最大・料金／利用時間と除外／ボタン */
 .chead{display:flex;align-items:center;gap:8px;min-width:0}
 .cp{flex:none;display:grid;place-items:center;width:26px;height:26px;border-radius:7px;background:var(--off);color:#fff;font:700 15px/1 var(--f-body);font-style:normal}
@@ -109,6 +112,15 @@ svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-lin
 .card.no .cp{background:var(--no);color:var(--on-no)}
 .cname{flex:1;min-width:0;font-size:20px;font-weight:700;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chead .badge{flex:none}
+/* 右上の料金 */
+.cfee{flex:none;font-size:18px;font-weight:700}
+.card.no .cfee,.card.unk .cfee{color:var(--ink-2)}
+/* 最大時間・駐車可能時間・除外日 */
+.cinfo{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:14px}
+.cinfo div{display:grid;gap:1px;min-width:0}
+.cinfo span{font-size:11px;color:var(--muted);white-space:nowrap}
+.cinfo b{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card.no .cinfo b,.card.unk .cinfo b{color:var(--ink-2)}
 .csub,.chours{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .csub{display:flex;justify-content:space-between;gap:10px}
 .csub span:first-child{overflow:hidden;text-overflow:ellipsis}
@@ -138,6 +150,7 @@ svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-lin
 .btn.big{height:52px;font-size:16px;width:100%}
 .card.none{cursor:default}
 .card.none p{margin:0;color:var(--ink-2);font-size:14px}
+.card.none .cnear{justify-self:start;height:48px;padding:0 20px}
 
 /* ---------- 地図の上の印 ---------- */
 .pm{width:0 !important;height:0 !important;border:0;background:none}

@@ -297,22 +297,27 @@ function computeRows(extra) {
 }
 
 // カードの3行目：利用時間と除外を1行で。「日曜・休日を除く」「１月１日〜３日を除く」→「日曜・休日、1/1–3 を除く」
-function hoursLine(z) {
-  if (z.days === 'unknown' || !z.span) return '';
+// カードの「除外日」：「日曜・休日を除く」「１月１日〜３日を除く」→「日・祝、1/1–3」
+function exclusions(z) {
   const md = t => t.replace(/(\d{1,2})月(\d{1,2})日/g, '$1/$2');
-  const ex = z.rules.map(r => md(r.replace(/(を除く|は休止)$/, '')).replace(/(\d+)日/g, '$1').replace(/[〜～]/g, '–').replace(/^(\d+)\/(\d+)–\1\/(\d+)$/, '$1/$2–$3')).filter(Boolean);
-  return ex.length ? `${z.hours} · ${ex.join('、')} を除く` : `毎日 ${z.hours}`;
+  // カードでは短く：「日曜・休日」→「日・祝」、「土・日曜、休日」→「土・日・祝」（詳しくは詳細に）
+  const short = t => t.replace(/土・日曜、休日/, '土・日・祝').replace(/日曜・休日/, '日・祝');
+  return z.rules.map(r => short(md(r.replace(/(を除く|は休止)$/, ''))).replace(/(\d+)日/g, '$1').replace(/[〜～]/g, '–').replace(/^(\d+)\/(\d+)–\1\/(\d+)$/, '$1/$2–$3')).filter(Boolean).join('、');
 }
 
+// カード：1行目に場所と料金（状態はPの色）、2行目に最大時間・駐車可能時間・除外日、3行目にボタン
 function cardHtml(r, i, n) {
-  const { z, d, s } = r;
-  const sub = [kindShort(z), distText(d), fmtLimit(z) && `最大${fmtLimit(z)}`, fmtFee(z)].filter(Boolean).join(' · ');
-  const hl = hoursLine(z);
+  const { z, s } = r;
+  const unk = z.days === 'unknown' || !z.span;
+  const ex = unk ? '現地で確認' : exclusions(z) || 'なし';
   return `
-    <article class="card ${s.a}${z.id === state.sel ? ' sel' : ''}" data-id="${esc(z.id)}" tabindex="0" aria-label="${esc(`${zoneName(z)}、${s.text}`)}">
-      <div class="chead"><i class="cp" aria-hidden="true">P</i><span class="cname">${esc(zoneName(z))}</span>${badge(s)}</div>
-      <div class="csub"><span>${esc(sub)}</span><span class="cnum">${i + 1}/${n}</span></div>
-      ${hl ? `<div class="chours">${esc(hl)}</div>` : ''}
+    <article class="card ${s.a}${z.id === state.sel ? ' sel' : ''}" data-id="${esc(z.id)}" tabindex="0" aria-label="${esc(`${zoneName(z)}、${s.text}、${i + 1}件目／${n}件`)}">
+      <div class="chead"><i class="cp" aria-hidden="true">P</i><span class="cname">${esc(zoneName(z))}</span>${fmtFee(z) ? `<b class="cfee">${esc(fmtFee(z))}</b>` : ''}</div>
+      <div class="cinfo">
+        <div><span>最大時間</span><b>${esc(fmtLimit(z) || '—')}</b></div>
+        <div><span>駐車可能時間</span><b>${esc(unk ? '現地で確認' : z.hours)}</b></div>
+        <div><span>除外日</span><b>${esc(ex)}</b></div>
+      </div>
       <div class="cbtns${Pro.shown ? ' has-star' : ''}">
         <button class="btn inkbtn" type="button" data-act="go">${I.go}ここへ行く</button>
         ${Pro.starBtn(z.id)}
@@ -338,7 +343,7 @@ function renderCards(extra) {
     $('#track').innerHTML = `
       <article class="card none">
         <p>この近く（1km以内）には区間がありません${near ? `。いちばん近い区間まで ${esc(fmtDist(near.d))}` : ''}</p>
-        ${near ? `<div class="cbtns"><button class="btn dark" type="button" data-act="nearest" data-id="${esc(near.z.id)}">いちばん近い区間へ</button><span></span></div>` : ''}
+        ${near ? `<button class="btn dark cnear" type="button" data-act="nearest" data-id="${esc(near.z.id)}">いちばん近い区間へ</button>` : ''}
       </article>`;
     draw();
     return;
@@ -356,7 +361,8 @@ function scrollToCard(id, smooth) {
   const tr = $('#track');
   const behavior = smooth ? 'smooth' : 'instant';
   autoScroll = smooth ? id : null;
-  if (narrow()) tr.scrollTo({ left: c.offsetLeft - 16, behavior });
+  // カードを横のまん中にそろえる
+  if (narrow()) tr.scrollTo({ left: c.offsetLeft - (tr.clientWidth - c.offsetWidth) / 2, behavior });
   else if (c.offsetTop < tr.scrollTop || c.offsetTop + c.offsetHeight > tr.scrollTop + tr.clientHeight) tr.scrollTo({ top: c.offsetTop - 16, behavior });
 }
 
@@ -403,7 +409,7 @@ function onTrackScroll() {
     const tr = $('#track');
     let best = null, bd = Infinity;
     tr.querySelectorAll('.card[data-id]').forEach(c => {
-      const d = Math.abs(c.offsetLeft - 16 - tr.scrollLeft);
+      const d = Math.abs(c.offsetLeft - (tr.clientWidth - c.offsetWidth) / 2 - tr.scrollLeft);
       if (d < bd) { bd = d; best = c; }
     });
     if (autoScroll) {
