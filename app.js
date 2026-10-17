@@ -60,6 +60,7 @@ const I = {
   map: svg('<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/>'),
   timer: svg('<circle cx="12" cy="13" r="8"/><path d="M12 13l3-3M9.5 2.5h5"/>'),
   yen: svg('<circle cx="12" cy="12" r="9"/><path d="M8.5 7.5L12 12l3.5-4.5M12 12v5M9 12.5h6M9 15h6"/>'),
+  cal: svg('<rect x="4" y="5.5" width="16" height="14.5" rx="2"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/>'),
   check: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
   info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'),
   chev: svg('<path d="M9 6l6 6-6 6"/>'),
@@ -305,24 +306,24 @@ function exclusions(z) {
   return z.rules.map(r => short(md(r.replace(/(を除く|は休止)$/, ''))).replace(/(\d+)日/g, '$1').replace(/[〜～]/g, '–').replace(/^(\d+)\/(\d+)–\1\/(\d+)$/, '$1/$2–$3')).filter(Boolean).join('、');
 }
 
-// カード：1行目に場所と料金（状態はPの色）、2行目に最大時間・駐車可能時間・除外日、3行目にボタン
+// カード：1段目に場所（状態はPの色）、2段目に利用時間・最大時間・料金・除外日（アイコン付き）、3段目にボタン
 function cardHtml(r, i, n) {
   const { z, s } = r;
   const unk = z.days === 'unknown' || !z.span;
   const ex = unk ? '現地で確認' : exclusions(z) || 'なし';
   return `
     <article class="card ${s.a}${z.id === state.sel ? ' sel' : ''}" data-id="${esc(z.id)}" tabindex="0" aria-label="${esc(`${zoneName(z)}、${s.text}、${i + 1}件目／${n}件`)}">
-      <div class="chead"><i class="cp" aria-hidden="true">P</i><span class="cname">${esc(zoneName(z))}</span>${fmtFee(z) ? `<b class="cfee">${esc(fmtFee(z))}</b>` : ''}</div>
+      <div class="chead"><i class="cp" aria-hidden="true">P</i><span class="cname">${esc(zoneName(z))}</span></div>
       <div class="cinfo">
-        <div><span>最大時間</span><b>${esc(fmtLimit(z) || '—')}</b></div>
-        <div><span>駐車可能時間</span><b>${esc(unk ? '現地で確認' : z.hours)}</b></div>
-        <div><span>除外日</span><b>${esc(ex)}</b></div>
+        <div>${I.clock}<b>${esc(unk ? '現地で確認' : z.hours)}</b><span>利用時間</span></div>
+        <div>${I.timer}<b>${esc(fmtLimit(z) || '—')}</b><span>最大時間</span></div>
+        <div>${I.yen}<b>${esc(fmtFee(z) || '—')}</b><span>料金</span></div>
+        <div>${I.cal}<b>${esc(ex)}</b><span>除外日</span></div>
       </div>
       <div class="cbtns${Pro.shown ? ' has-star' : ''}">
         <button class="btn inkbtn" type="button" data-act="go">${I.go}ここへ行く</button>
         ${Pro.starBtn(z.id)}
         <button class="btn sub" type="button" data-act="detail">詳細</button>
-        ${timerBtnHtml(z)}
       </div>
     </article>`;
 }
@@ -430,7 +431,6 @@ function onCardClick(e) {
     // ☆はお気に入りだけを切り替える（カードの選択・めくりは起こさない）
     if (act === 'fav') Pro.toggleFav(b.dataset.id);
     else if (act === 'go') startGo(z);
-    else if (act === 'timer') openTimer(z);
     else if (act === 'detail') openDetail(z);
     else if (act === 'nearest' && z) { state.moved = true; centerOn(z.center, 16); }
     return;
@@ -633,36 +633,35 @@ function overText(ms) {
   const s = Math.floor(-ms / 1000);
   return s < 60 ? `−${s}秒` : `−${fmtMin(Math.floor(s / 60))}`;
 }
-// カードのタイマーボタン。動いているあいだは残り時間（残り10分を切ったら赤、過ぎたらマイナスで赤）
-function timerBtnHtml(z) {
+// 右下のタイマーボタン（現在地ボタンの上）。動いているあいだは残り時間（残り10分を切ったら赤、過ぎたらマイナスで赤）
+function updateTimerBtn() {
+  const b = $('#timerBtn');
+  if (!b) return;
   const left = timerLeft();
-  if (left == null) return `<button class="btn ctimer" type="button" data-act="timer" aria-label="タイマー">${I.clock}</button>`;
-  const cls = left <= 10 * 60000 ? 'warn' : 'run';
-  return `<button class="btn ctimer ${cls}" type="button" data-act="timer" aria-label="タイマー（${left > 0 ? `あと${shortLeft(left)}` : `${shortLeft(left).slice(1)}超過`}）"><small>${left > 0 ? 'あと' : '超過'}</small><b>${esc(shortLeft(left))}</b></button>`;
-}
-// カードのタイマーボタンだけを書き換える（1秒ごと）
-function updateCardTimers() {
-  const left = timerLeft();
-  document.querySelectorAll('#track .ctimer').forEach(b => {
-    const cls = left == null ? '' : left <= 10 * 60000 ? 'warn' : 'run';
-    if (left == null) { if (b.classList.contains('run') || b.classList.contains('warn')) b.outerHTML = timerBtnHtml(); return; }
-    b.className = `btn ctimer ${cls}`;
-    const txt = shortLeft(left);
-    if (!b.querySelector('b')) b.innerHTML = '<small></small><b></b>';
-    b.querySelector('small').textContent = left > 0 ? 'あと' : '超過';
-    b.querySelector('b').textContent = txt;
-  });
+  b.classList.toggle('run', left != null && left > 10 * 60000);
+  b.classList.toggle('warn', left != null && left <= 10 * 60000);
+  if (left == null) {
+    if (!b.querySelector('svg')) b.innerHTML = I.clock;
+    b.setAttribute('aria-label', 'タイマー');
+    return;
+  }
+  if (!b.querySelector('b')) b.innerHTML = '<small></small><b></b>';
+  b.querySelector('small').textContent = left > 0 ? 'あと' : '超過';
+  b.querySelector('b').textContent = shortLeft(left);
+  b.setAttribute('aria-label', `タイマー（${left > 0 ? `あと${shortLeft(left)}` : `${shortLeft(left).slice(1)}超過`}）`);
 }
 
+// 動いていないときは、選んでいる区間（なければ現在地にいちばん近い区間）でタイマーを開く
 // z：カードのタイマーボタンから開いたときは、その区間（動いているときは動いている区間）
 function openTimer(z) {
   showPanel('');
   timerZone = timer ? byId.get(timer.zoneId) : z && z.id ? z : timerZoneOf();
   renderTimer();
   $('#timer').hidden = false;
+  $('#timerScrim').hidden = false; // 開いているあいだは、ほかのボタン・地図を押せないようにする
   $('#tclose').focus();
 }
-function closeTimer() { $('#timer').hidden = true; }
+function closeTimer() { $('#timer').hidden = true; $('#timerScrim').hidden = true; }
 
 function renderTimer() {
   const z = timer ? byId.get(timer.zoneId) : timerZone;
@@ -764,7 +763,7 @@ function checkCar() {
 }
 // タイマーが動いているあいだは、ボタンに印を付け、車の場所に印を出す
 function showTimerState() {
-  updateCardTimers();
+  updateTimerBtn();
   if (carMark) { map.removeLayer(carMark); carMark = null; }
   if (timer) {
     carMark = L.marker(timer.carLatLng, {
@@ -779,7 +778,7 @@ function askNotify() {
 // 終わる10分前に1回だけ知らせる（許可がないときは画面の表示だけ）
 function tickTimer() {
   if (!$('#timer').hidden) updateTimer();
-  updateCardTimers();
+  updateTimerBtn();
   if (!timer || timer.notified || Pro.gated() || !load('pmm-notify', false)) return;
   const left = timer.startedAt + timer.limitMin * 60000 - Date.now();
   if (left > 10 * 60000 || left <= 0) return;
@@ -979,6 +978,7 @@ function bind() {
   $('#goScrim').addEventListener('click', e => { if (e.target === $('#goScrim')) closeGo(); });
 
   $('#helpBtn').addEventListener('click', () => Pro.openAbout());
+  $('#timerBtn').addEventListener('click', () => openTimer());
   Pro.bind();
   $('#timer').addEventListener('click', e => {
     const b = e.target.closest('button');
