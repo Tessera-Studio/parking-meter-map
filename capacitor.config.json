@@ -1,6 +1,6 @@
 {
   "appId": "jp.tesseras.parkingmetermap",
-  "appName": "パーキング・メーター・マップ",
+  "appName": "メーターマップ",
   "webDir": "www",
   "ios": {
     "contentInset": "never"

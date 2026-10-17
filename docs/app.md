@@ -5,7 +5,7 @@
 
 | 項目 | 値 |
 |---|---|
-| アプリ名 | パーキング・メーター・マップ |
+| アプリ名（ホーム画面） | メーターマップ（`capacitor.config.json` の appName、iOS の `CFBundleDisplayName`、Android の `app_name`） |
 | アプリの ID（Bundle ID / applicationId） | `jp.tesseras.parkingmetermap` |
 | Capacitor | 8 |
 | iOS の依存の管理 | Swift Package Manager（CocoaPods は使わない） |
@@ -62,6 +62,8 @@ Android Studio で、右上のエミュレーター（Pixel など）を選ん�
 - Android：`android/app/src/main/AndroidManifest.xml` の `ACCESS_COARSE_LOCATION`・`ACCESS_FINE_LOCATION`
 
 ## これから（順番）
+
+**まずは iPhone 版から**仕上げる（2026-10-17 に決定）。Android はそのあと。
 
 1. **いまの段階**：雛形。Web の画面がそのままアプリで動く
 2. 有料プランをストアの購入に（RevenueCat。App Store / Google Play）。Stripe・Cloudflare の仕組み（`functions/`・`lib/`・`scripts/pro-keys.mjs`）と、メールでの復元はやめる。仕様は docs/pro-ads.md を書き直す
