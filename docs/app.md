@@ -52,6 +52,21 @@ npm run android    # www/ を作り、android/ に写し、Android Studio を開
 
 Android Studio で、右上のエミュレーター（Pixel など）を選んで ▶ を押す。
 
+## 有料プランの購入を試す（シミュレーター・StoreKit）
+
+購入は App Store のアプリ内課金（StoreKit 2。プラグイン @capgo/native-purchases）。Xcode の **StoreKit 設定ファイル**を使うと、App Store Connect に商品を登録する前でも、シミュレーターで購入・復元・返金を試せる（お金はかからない）。商品は `ios/App/Products.storekit` に入れてある（商品 ID `jp.tesseras.parkingmetermap.pro`・非消耗型・480円）。
+
+初回だけ、Xcode で次の2つを行う：
+
+1. **ファイルをプロジェクトに入れる**：左の一覧の一番上の「App」（青いアイコン）を右クリック →「Add Files to "App"…」→ `ios/App/Products.storekit` を選ぶ →「Add」（Targets のチェックは外してよい）
+2. **スキームに設定する**：メニューの **Product → Scheme → Edit Scheme…** → 左の「Run」→ 上の「Options」タブ →「StoreKit Configuration」で **Products.storekit** を選ぶ →「Close」
+
+そのあと ▶ で起動し、タイマーか★を押す →「¥480で購入する」→ 購入の確認が出る →「購入」。鍵が外れれば成功。
+
+- **返金を試す**：メニューの **Debug → StoreKit → Manage Transactions…** で購入を選び、右クリック →「Refund Purchases」。アプリに戻ると鍵が付き直す
+- **最初からやり直す**：同じ画面で購入を選んで削除（ゴミ箱）。アプリを消して入れ直すと、前回の記録も消える
+- **承認待ちを試す**：Products.storekit を開き、メニューの **Editor → Enable Ask To Buy**
+
 ## 画面を変えたとき
 
 画面のファイル（`app.js`・`styles.css` など）を変えたら、`npm run sync` で `www/` を作り直して `ios/`・`android/` に写す（`npm run ios` / `npm run android` は sync まで含む）。
@@ -66,7 +81,7 @@ Android Studio で、右上のエミュレーター（Pixel など）を選ん�
 **まずは iPhone 版から**仕上げる（2026-10-17 に決定）。Android はそのあと。
 
 1. **いまの段階**：雛形。Web の画面がそのままアプリで動く（有料プランの★・タイマーは鍵付きで見え、購入は「準備中」。`config.js` の `proShown: true`）
-2. 有料プランをストアの購入に（RevenueCat。App Store / Google Play）。Stripe・Cloudflare の仕組み（`functions/`・`lib/`・`scripts/pro-keys.mjs`）と、メールでの復元はやめる。仕様は docs/pro-ads.md を書き直す
+2. ~~有料プランをストアの購入に~~（済み：StoreKit 2・@capgo/native-purchases。Stripe・Cloudflare の仕組みとメールでの復元はやめた。docs/pro-ads.md §15.6）。残り：App Store Connect に商品を登録して、Sandbox の Apple ID で実機で試す（docs/pro-ads.md §23）
 3. タイマーの通知を、アプリの通知（@capacitor/local-notifications）に
 4. 「ここへ行く」で地図アプリを確実に開く（@capacitor/app-launcher など）
 5. アイコン・起動画面（@capacitor/assets）
