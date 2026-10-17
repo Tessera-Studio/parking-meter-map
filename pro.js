@@ -91,6 +91,7 @@
     const fb = document.getElementById('favBtn');
     if (fb) { fb.hidden = !P.shown; fb.classList.toggle('locked', P.gated()); }
     if (typeof updateTimerBtn === 'function') updateTimerBtn();
+    if (typeof scheduleNotify === 'function') scheduleNotify(); // 有料プランでなくなったら通知の予約も消す
     if (typeof renderCards === 'function' && zones.length) {
       if (state.detail) { const z = byId.get(state.sel); if (z) renderDetail(z); } else renderCards();
     }
@@ -401,12 +402,11 @@
     ['アプリの表示と現地の標識が違うときは？', '現地の標識・メーター・チケットの表示が優先です。工事や行事で使えない日もあります。'],
     ['最大時間を過ぎたらどうなりますか？', '制限時間を過ぎての駐車はできません。タイマーは残り10分で赤くなり、時間を過ぎると超えた時間をマイナスで表示します。'],
     ['タイマーの使い方は？', '右下（現在地ボタンの上）のストップウォッチのボタンを押し、「スタート」を押します。動いているあいだは、そのボタンに残り時間が出ます（10分を切ると赤）。「車の場所を確認」で、停めた場所に地図を戻せます。'],
-    ['終わる前に通知を受け取るには？', 'タイマーの「終わる10分前に知らせる」をオンにし、通知を許可してください。ホーム画面に追加すると、画面を閉じていても届きます。'],
+    ['終わる前に通知を受け取るには？', 'タイマーの「終わる10分前に知らせる」をオンにし、通知を許可してください。10分前と、時間になったときに、画面を閉じていても届きます。届かないときは、設定アプリの「通知」→「メーターマップ」で許可してください。'],
     ['パーキング・メーターとパーキング・チケットの違いは？', 'メーターは区間ごとの機械に、チケットは近くの発給機で買った券を車内に表示します。どちらも料金と時間は現地の表示に従ってください。'],
     ['グレーの破線の区間（神奈川など）は？', '県警の公開情報に利用時間・曜日が載っていない区間です。時間は現地の標識で確かめてください。'],
     ['どの地域に対応していますか？', '東京・大阪・神奈川・札幌・京都です。地図を動かすか、上の検索欄に地名・駅名を入れてください。'],
-    ['現在地が出ないときは？', '端末の設定で、ブラウザ（またはホーム画面のアイコン）に位置情報の利用を許可してください。iPhone は「設定」→「Safari」→「位置情報」です。'],
-    ['ホーム画面に追加するには？', 'iPhone は Safari の共有ボタンから「ホーム画面に追加」、Android は Chrome のメニューから「ホーム画面に追加」を選んでください。'],
+    ['現在地が出ないときは？', '設定アプリの「メーターマップ」→「位置情報」で、「このAppの使用中」を選んでください。'],
   ];
 
   // 右上の「？」のメニュー：よくある質問・このアプリについて（データと地図の出典・お問い合わせ）
@@ -440,6 +440,11 @@
   function setAdH(h) { document.documentElement.style.setProperty('--ad-h', `${Math.max(0, Math.round(h || 0))}px`); }
   async function initAds() {
     if (!adInit) adInit = (async () => {
+      // トラッキングの許可（App Tracking Transparency）：起動時ではなく、初めて広告を出す前に1回だけ聞く
+      try {
+        const { status } = await admob.trackingAuthorizationStatus();
+        if (status === 'notDetermined') await admob.requestTrackingAuthorization();
+      } catch (e) {}
       await admob.initialize({ initializeForTesting: !!CFG.admobTesting });
       try {
         await admob.addListener('bannerAdSizeChanged', info => setAdH(adState === 'shown' ? info && info.height : 0));

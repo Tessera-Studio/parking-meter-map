@@ -74,6 +74,11 @@ Android Studio で、右上のエミュレーター（Pixel など）を選ん�
 - アプリ ID：`ios/App/App/Info.plist` の `GADApplicationIdentifier`（ない・間違っていると、アプリが起動してすぐ落ちる）
 - バナーの ID：`config.js` の `admobBannerId`。テスト広告：`admobTesting: true`
 - 本番にするときの手順：docs/pro-ads.md §23 の 6
+- トラッキングの許可の確認は、無料で初めて詳細かタイマーを開いたときに1回だけ出る。もう一度試すときは、シミュレーターでアプリを消して入れ直す（または「設定 → プライバシーとセキュリティ → トラッキング」）
+
+## タイマーの通知
+
+スタートしたときに、iPhone の通知を2つ予約する（「あと10分です」「時間です」。@capacitor/local-notifications）。シミュレーターで試すときは、最大時間の短い区間を選ぶか、Mac の時計はそのままで待つ。ホームに戻っても、時刻になれば通知が出る。予約の取り消しは、ストップ・通知のオフ・有料プランでなくなったとき。
 
 ## 画面を変えたとき
 
@@ -90,7 +95,7 @@ Android Studio で、右上のエミュレーター（Pixel など）を選ん�
 
 1. **いまの段階**：雛形。Web の画面がそのままアプリで動く（有料プランの★・タイマーは鍵付きで見え、購入は「準備中」。`config.js` の `proShown: true`）
 2. ~~有料プランをストアの購入に~~（済み：StoreKit 2・@capgo/native-purchases。Stripe・Cloudflare の仕組みとメールでの復元はやめた。docs/pro-ads.md §15.6）。残り：App Store Connect に商品を登録して、Sandbox の Apple ID で実機で試す（docs/pro-ads.md §23）
-3. タイマーの通知を、アプリの通知（@capacitor/local-notifications）に
+3. ~~タイマーの通知を、アプリの通知に~~（済み）
 4. 「ここへ行く」で地図アプリを確実に開く（@capacitor/app-launcher など）
 5. アイコン・起動画面（@capacitor/assets）
 6. Web 版をやめる：GitHub の **Settings → Pages** で公開を止める
