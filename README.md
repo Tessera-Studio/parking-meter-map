@@ -22,7 +22,7 @@
 
 **Pro（480円・買い切り）と広告**の仕組みも入っています（お気に入り・タイマーの通知・広告なし。[docs/pro-ads.md](docs/pro-ads.md)）。いまは `config.js` で止めてあり、公開中の画面には出ません。始める手順は docs/pro-ads.md §23。
 
-**iOS・Android のアプリ**にもできます（Capacitor。アプリを閉じていても届くタイマー通知つき）。作り方・出し方は [docs/native-app.md](docs/native-app.md)。
+**iOS・Android のアプリ**にもできます（Capacitor。アプリを閉じていても届くタイマー通知、Pro はアプリ内課金）。作り方・出し方は [docs/native-app.md](docs/native-app.md)、ストアの掲載文は [docs/store-listing.md](docs/store-listing.md)。
 
 ## データ
 

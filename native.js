@@ -27,7 +27,45 @@
       if (notifications.length && await askNotify()) await LN.schedule({ notifications });
     } catch (e) { /* 通知を出せない端末では画面の表示だけ */ }
   }
-  window.Native = { askNotify, schedule };
+  // アプリ内課金（RevenueCat）。Pro は買い切りの商品1つ（PRODUCT）と、それで有効になる権利（ENTITLEMENT）
+  const PRODUCT = 'pmm_pro', ENTITLEMENT = 'pro';
+  const RC = window.capacitorExports && window.capacitorExports.registerPlugin('Purchases');
+  const cancelled = e => !!e && (e.userCancelled || String(e.code) === '1' || (!!e.data && (e.data.userCancelled || String(e.data.code) === '1')));
+  // { on, since（購入日時・ミリ秒） }
+  const proOf = info => {
+    const ent = info && info.entitlements && info.entitlements.active && info.entitlements.active[ENTITLEMENT];
+    return { on: !!ent, since: ent ? ent.originalPurchaseDateMillis || Date.parse(ent.originalPurchaseDate) || null : null };
+  };
+  let product = null;
+  // 値段の表示と購入に使う商品。通信できないときは、買うときにもう一度取りにいく
+  async function loadProduct() {
+    try {
+      const { products } = await RC.getProducts({ productIdentifiers: [PRODUCT], type: 'NON_SUBSCRIPTION' });
+      product = (products || [])[0] || product;
+    } catch (e) {}
+    return product;
+  }
+  const store = {
+    // config.js の revenuecat の鍵で始める。鍵がない・始められないときは false（Pro を出さない）
+    async init(keys) {
+      const apiKey = keys && keys[cap.getPlatform()];
+      if (!RC || !apiKey) return false;
+      try { await RC.configure({ apiKey }); } catch (e) { return false; }
+      await loadProduct();
+      return true;
+    },
+    price: () => (product ? product.priceString : null),
+    async status() { const { customerInfo } = await RC.getCustomerInfo(); return proOf(customerInfo); },
+    // 買う。やめたときは null
+    async buy() {
+      if (!product && !await loadProduct()) throw new Error('no product');
+      try { const { customerInfo } = await RC.purchaseStoreProduct({ product }); return proOf(customerInfo); }
+      catch (e) { if (cancelled(e)) return null; throw e; }
+    },
+    async restore() { const { customerInfo } = await RC.restorePurchases(); return proOf(customerInfo); },
+  };
+
+  window.Native = { platform: cap.getPlatform(), askNotify, schedule, store };
 
   // 現在地：app.js の navigator.geolocation の呼び方のまま、Geolocation プラグインにつなぐ
   const GEO = window.capacitorGeolocationPluginCapacitor && window.capacitorGeolocationPluginCapacitor.Geolocation;

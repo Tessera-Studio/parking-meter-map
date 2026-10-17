@@ -9,7 +9,11 @@
     apiBase: '/api',
     adsenseClient: '',     // ca-pub-…
     adsenseSlots: { detail: '', timer: '' },
+    siteUrl: '',           // アプリ版で、特商法の表記・プライバシーポリシーを開くときの Web 版の URL（末尾は /）
+    revenuecat: { ios: '', android: '' }, // アプリ版のアプリ内課金（docs/native-app.md）
   }, window.PMM_CONFIG || {});
+  // アプリ版（native.js）では、Pro を App Store・Google Play のアプリ内課金で売る
+  const STORE = window.Native ? window.Native.store : null;
 
   const PRICE = '480円';
   const SELLER = '合同会社Tessera Studio';
@@ -34,6 +38,7 @@
     iat: null,                  // 購入証の発行日時（秒）
     shown: CFG.proEnabled || !!preview, // お気に入り・鍵・購入シートを出すか
     gated() { return this.shown && !this.on; },
+    price: () => (STORE && STORE.price()) || PRICE,
   };
 
   /* ---------- 購入証（ライセンス）：base64url(JSON) + "." + base64url(ECDSA P-256 署名) ---------- */
@@ -64,7 +69,13 @@
 
   // 起動時：保存してある購入証を確かめる（壊れている・消えているときは黙って無料に戻す）。購入から戻ってきたときの処理も
   P.init = async function () {
-    if (CFG.proEnabled) {
+    if (CFG.proEnabled && STORE) {
+      // アプリ版：ストアの購入を確かめる（RevenueCat が前回の結果を持っているので、通信できなくても Pro のまま）
+      if (!await STORE.init(CFG.revenuecat)) P.shown = false;
+      else {
+        try { const r = await STORE.status(); P.on = r.on; P.iat = r.since && r.since / 1000; } catch (e) {}
+      }
+    } else if (CFG.proEnabled) {
       let lic = null;
       try { lic = localStorage.getItem(K.pro); } catch (e) {}
       const body = await checkLicense(lic);
@@ -236,7 +247,15 @@
   }
 
   /* ---------- 購入シート・復元 ---------- */
-  const legalLinks = () => '<p class="blegal"><a href="legal.html" target="_blank" rel="noopener">特定商取引法に基づく表記</a><a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a></p>';
+  // アプリ版は Web 版のページを開く（siteUrl がないときは出さない）
+  const legalLinks = () => {
+    const base = STORE ? CFG.siteUrl : '';
+    if (STORE && !base) return '';
+    return `<p class="blegal"><a href="${esc(base)}legal.html" target="_blank" rel="noopener">特定商取引法に基づく表記</a><a href="${esc(base)}privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a></p>`;
+  };
+  // Pro でできること（広告を出していないときは「広告なし」を言わない）
+  const FEATS = () => [CFG.adsEnabled && '広告が出なくなります', 'タイマーが終わる10分前に通知します', 'よく使う区間・行き先を保存できます'].filter(Boolean);
+  const FEATS_SHORT = () => [CFG.adsEnabled && '広告なし', 'タイマーの通知', 'お気に入り'].filter(Boolean).join('・');
   function openSheet(html) {
     $('#buySheet').innerHTML = html;
     $('#buyScrim').hidden = false;
@@ -249,12 +268,8 @@
     openSheet(`
       <h2 id="buyTitle">パーキング・メーター・マップ Pro</h2>
       <p class="blead">1回のお支払いで、ずっと使えます</p>
-      <ul class="bfeat">
-        <li>${I.check}広告が出なくなります</li>
-        <li>${I.check}タイマーが終わる10分前に通知します</li>
-        <li>${I.check}よく使う区間・行き先を保存できます</li>
-      </ul>
-      <button class="btn go big" type="button" data-buy>${PRICE}で購入する</button>
+      <ul class="bfeat">${FEATS().map(f => `<li>${I.check}${f}</li>`).join('')}</ul>
+      <button class="btn go big" type="button" data-buy>${esc(P.price())}で購入する</button>
       <button class="blink" type="button" data-restore>購入済みの方はこちら（復元）</button>
       <button class="cancel" type="button" data-cancel>やめる</button>
       <p class="bnote">地図と時間の表示は、これまでどおり無料です。</p>
@@ -263,6 +278,7 @@
   };
 
   P.openRestore = function () {
+    if (STORE) return restoreStore();
     openSheet(`
       <h2 id="buyTitle">購入の復元</h2>
       <form class="rform" id="restoreForm">
@@ -275,7 +291,29 @@
     $('#restoreEmail').focus();
   };
 
+  // アプリ版：ストアで買う・復元する
+  const becomePro = (r, msg) => { P.on = true; P.iat = r.since && r.since / 1000; P.closeSheet(); afterChange(); P.toast(msg); };
+  async function buyStore() {
+    const btn = $('#buySheet [data-buy]');
+    if (btn) btn.disabled = true;
+    try {
+      const r = await STORE.buy();
+      if (r && r.on) becomePro(r, 'Pro になりました。ありがとうございます');
+    } catch (e) { P.toast('購入できませんでした。通信状態を確かめて、もう一度お試しください', { ms: 5000 }); }
+    if (btn) btn.disabled = false;
+  }
+  async function restoreStore() {
+    P.toast('購入を確認しています…', { ms: 10000 });
+    const who = window.Native.platform === 'ios' ? 'この Apple アカウント' : 'この Google アカウント';
+    try {
+      const r = await STORE.restore();
+      if (r.on) becomePro(r, 'Pro を復元しました');
+      else P.toast(`${who}での購入が見つかりませんでした`, { ms: 5000 });
+    } catch (e) { P.toast('通信できませんでした。通信状態を確かめてください', { ms: 5000 }); }
+  }
+
   async function checkout() {
+    if (STORE) return buyStore();
     if (!CFG.proEnabled) return P.toast('（確認用の画面です）販売の開始前のため、購入できません');
     try {
       const r = await fetch(`${CFG.apiBase}/checkout`, { method: 'POST' });
@@ -334,11 +372,20 @@
     ['ホーム画面に追加するには？', 'iPhone は Safari の共有ボタンから「ホーム画面に追加」、Android は Chrome のメニューから「ホーム画面に追加」を選んでください。'],
   ];
 
+  // アプリ版：ホーム画面への追加・ブラウザの話をアプリの話にする
+  if (STORE) {
+    const APP_FAQ = {
+      '終わる前に通知を受け取るには？': 'タイマーの「終わる10分前に知らせる」をオンにし、通知を許可してください。アプリを閉じていても、終わる10分前と時間になったときに届きます。',
+      '現在地が出ないときは？': '端末の「設定」で、このアプリに位置情報の利用を許可してください。',
+    };
+    P.FAQ = P.FAQ.filter(([q]) => q !== 'ホーム画面に追加するには？').map(([q, a]) => [q, APP_FAQ[q] || a]);
+  }
+
   // 右上の「？」のメニュー：よくある質問・このアプリについて（データと地図の出典・お問い合わせ）
   P.openAbout = function () {
     const proRow = !P.shown ? ''
       : P.on ? `<div class="arow"><b>Pro をご利用中です</b>${P.iat ? `<small>購入日 ${new Date(P.iat * 1000).toLocaleDateString('ja-JP')}</small>` : ''}</div>`
-      : `<button class="arow btnrow" type="button" data-gopro><b>Pro にする（${PRICE}）</b><small>広告なし・タイマーの通知・お気に入り</small></button>`;
+      : `<button class="arow btnrow" type="button" data-gopro><b>Pro にする（${esc(P.price())}）</b><small>${FEATS_SHORT()}</small></button>`;
     const credit = typeof mapCredit === 'function' ? mapCredit() : '';
     openSheet(`
       <h2 id="buyTitle">ヘルプ</h2>

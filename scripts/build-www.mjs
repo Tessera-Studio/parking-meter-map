@@ -19,9 +19,10 @@ cpSync(`${NM}/local-notifications/dist/plugin.js`, `${OUT}/vendor/capacitor/loca
 writeFileSync(`${OUT}/vendor/capacitor/geolocation.js`, readFileSync(`${NM}/synapse/dist/synapse.js`, 'utf8') +
   '\nvar synapse = outsystemsSynapse;\n' + readFileSync(`${NM}/geolocation/dist/plugin.js`, 'utf8'));
 
-// アプリ版では Pro の販売（Stripe）と広告（AdSense）を出さない。App Store・Google Play の決まりで使えないため（docs/native-app.md）
+// アプリ版では Stripe と AdSense を使わない（App Store・Google Play の決まり。docs/native-app.md）。
+// Pro はアプリ内課金で、nativeProEnabled が true のときだけ売る
 writeFileSync(`${OUT}/config.js`, readFileSync('config.js', 'utf8') +
-  '\n/* アプリ版（scripts/build-www.mjs が足す） */\nObject.assign(window.PMM_CONFIG, { proEnabled: false, adsEnabled: false });\n');
+  '\n/* アプリ版（scripts/build-www.mjs が足す） */\nObject.assign(window.PMM_CONFIG, { proEnabled: !!window.PMM_CONFIG.nativeProEnabled, adsEnabled: false });\n');
 
 // config.js の前に Capacitor と native.js を差し込む
 const html = readFileSync('index.html', 'utf8');
