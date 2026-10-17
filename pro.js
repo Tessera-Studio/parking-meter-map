@@ -1,9 +1,10 @@
 /* Pro・お気に入り・広告・「このアプリについて」（docs/pro-ads.md）
-   設定は config.js の window.PMM_CONFIG。販売前（proEnabled: false）は、お気に入り・鍵・購入シート・広告を一切出さず、
-   これまでどおりの画面（タイマーも無料）のまま。販売中は、タイマーとお気に入りが有料プランの機能。app.js より先に読み込み、app.js の関数は呼ばれたときに使う。 */
+   設定は config.js の window.PMM_CONFIG。販売前（proEnabled: false）でも、proShown: true なら
+   お気に入りの★・タイマーを鍵付きで見せる（購入は「準備中」）。proShown: false なら、これまでどおりの画面（タイマーも無料）。販売中は、タイマーとお気に入りが有料プランの機能。app.js より先に読み込み、app.js の関数は呼ばれたときに使う。 */
 (function () {
   const CFG = Object.assign({
     proEnabled: false,     // 販売を始めたら true（Stripe・Cloudflare の準備ができてから）
+    proShown: false,       // 販売前でも、有料プランの機能を鍵付きで見せる（購入は「準備中」）
     adsEnabled: false,     // AdSense の審査が通ったら true
     proPublicKey: null,    // 購入証の署名を確かめる公開鍵（JWK）。scripts/pro-keys.mjs で作る
     apiBase: '/api',
@@ -32,7 +33,7 @@
     cfg: CFG, PRICE, SELLER, SELLER_SHORT, SUPPORT,
     on: preview === 'pro',      // Pro か
     iat: null,                  // 購入証の発行日時（秒）
-    shown: CFG.proEnabled || !!preview, // お気に入り・鍵・購入シートを出すか
+    shown: CFG.proEnabled || CFG.proShown || !!preview, // お気に入り・鍵・購入シートを出すか
     gated() { return this.shown && !this.on; },
   };
 
@@ -247,7 +248,8 @@
   }
 
   /* ---------- 購入シート・復元 ---------- */
-  const legalLinks = () => '<p class="blegal"><a href="legal.html" target="_blank" rel="noopener">特定商取引法に基づく表記</a><a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a></p>';
+  // 特定商取引法の表記・プライバシーポリシーは、販売を始めるときに公開する（それまではリンクを出さない）
+  const legalLinks = () => !CFG.proEnabled ? '' : '<p class="blegal"><a href="legal.html" target="_blank" rel="noopener">特定商取引法に基づく表記</a><a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a></p>';
   function openSheet(html) {
     $('#buySheet').innerHTML = html;
     $('#buyScrim').hidden = false;
@@ -324,7 +326,7 @@
   };
 
   async function checkout() {
-    if (!CFG.proEnabled) return P.toast('（確認用の画面です）販売の開始前のため、購入できません');
+    if (!CFG.proEnabled) return P.toast('有料プランの購入は準備中です。もうしばらくお待ちください');
     try {
       const r = await fetch(`${CFG.apiBase}/checkout`, { method: 'POST' });
       const j = await r.json();
@@ -335,7 +337,7 @@
 
   async function restore(email) {
     const msg = $('#restoreMsg');
-    if (!CFG.proEnabled) { msg.textContent = '（確認用の画面です）販売の開始前のため、復元できません'; return; }
+    if (!CFG.proEnabled) { msg.textContent = '有料プランの購入は準備中です。もうしばらくお待ちください'; return; }
     msg.textContent = '確認しています…';
     try {
       const r = await fetch(`${CFG.apiBase}/restore`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email }) });
