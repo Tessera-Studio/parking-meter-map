@@ -190,7 +190,7 @@
 - 初めて詳細かタイマーを開いたときに初期化し、バナーを出す。閉じたら隠し、また開いたら出し直す。
 - 設定（`config.js`）：`adsEnabled`、`admobBannerId`（バナーの広告ユニット ID）、`admobTesting`（テスト広告）。アプリ ID は `ios/App/App/Info.plist` の `GADApplicationIdentifier`（Android は `AndroidManifest.xml` の `com.google.android.gms.ads.APPLICATION_ID`）。
 - **いまは Google のテスト用 ID**（アプリ ID `ca-app-pub-3940256099942544~1458002511`、バナー `ca-app-pub-3940256099942544/2435281174`）。本番は AdMob の管理画面で作った ID に替え、`admobTesting: false`。
-- トラッキングの許可（App Tracking Transparency）は求めない（パーソナライズしない広告になる）。求めるときは `NSUserTrackingUsageDescription` を足し、起動時ではなく初めて広告を出す前に聞く。
+- **トラッキングの許可（App Tracking Transparency）を求める**。起動時ではなく、初めて広告を出す前（無料で詳細かタイマーを初めて開いたとき）に1回だけ。説明文（`Info.plist` の `NSUserTrackingUsageDescription`）は「あなたに合った広告を表示するために使います。許可しなくても、アプリはすべてお使いいただけます。」。許可されなければ、パーソナライズしない広告になる。有料プランの人には聞かない。
 - `SKAdNetworkItems` は Google の ID だけ入れてある。本番の前に、Google の案内にある一覧をすべて足す。
 
 ## 17. 「？」のメニュー（ヘルプ・このアプリについて）

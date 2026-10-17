@@ -683,7 +683,7 @@ function renderTimer() {
       </div>
       <div class="tnotify">
         <label class="switch${locked ? ' locked' : ''}"><span>終わる10分前に知らせる${locked ? `<i class="lock" aria-label="有料プランの機能">${svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>')}</i>` : ''}</span><input type="checkbox" id="tnotify" role="switch"${notify ? ' checked' : ''}${locked ? ' data-locked' : ''}></label>
-        <small>ホーム画面に追加すると、画面を閉じていても届きます</small>
+        <small>${localNotify ? '画面を閉じていても届きます（10分前と時間）' : 'ホーム画面に追加すると、画面を閉じていても届きます'}</small>
       </div>
       <button class="btn sub big" type="button" id="tcar"${running ? '' : ' disabled'}>${I.pin}車の場所を確認</button>
       <p class="tfoot">メーター・チケットに表示された時刻が優先です</p>
@@ -734,7 +734,7 @@ function startTimer() {
   if (!z) return;
   timer = { zoneId: z.id, startedAt: Date.now(), limitMin: z.limitMin || 60, carLatLng: state.here || z.center, notified: false };
   save('pmm-timer', timer);
-  if (load('pmm-notify', false)) askNotify();
+  if (load('pmm-notify', false)) askNotify().then(scheduleNotify);
   renderTimer();
   showTimerState();
 }
@@ -742,6 +742,7 @@ function stopTimer() {
   timerZone = timer ? byId.get(timer.zoneId) : timerZone;
   timer = null;
   save('pmm-timer', null);
+  scheduleNotify();
   renderTimer();
   showTimerState();
 }
@@ -764,14 +765,44 @@ function showTimerState() {
     }).addTo(map);
   }
 }
-function askNotify() {
+// 通知：アプリでは iPhone の通知（@capacitor/local-notifications）を予約する。画面を閉じていても届く
+const localNotify = window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && Capacitor.Plugins && Capacitor.Plugins.LocalNotifications || null;
+const NOTIFY_IDS = [1, 2]; // 1：終わる10分前、2：時間
+// 許可を聞く（初めてオンにしたときだけ確認が出る）。許可されなかったら札で設定の場所を知らせる
+async function askNotify() {
+  if (localNotify) {
+    try {
+      let p = await localNotify.checkPermissions();
+      if (p.display === 'prompt' || p.display === 'prompt-with-rationale') p = await localNotify.requestPermissions();
+      if (p.display !== 'granted') Pro.toast('通知が許可されていません。設定アプリの「通知」→「メーターマップ」で許可できます', { ms: 6000 });
+      return p.display === 'granted';
+    } catch (e) { return false; }
+  }
   if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch?.(() => {});
+  return false;
 }
-// 終わる10分前に1回だけ知らせる（許可がないときは画面の表示だけ）
+// タイマー・通知の切り替え・有料プランが変わるたびに、予約を作り直す（10分前と、時間になったとき）
+async function scheduleNotify() {
+  if (!localNotify) return;
+  try {
+    await localNotify.cancel({ notifications: NOTIFY_IDS.map(id => ({ id })) });
+    if (!timer || Pro.gated() || !load('pmm-notify', false)) return;
+    if ((await localNotify.checkPermissions()).display !== 'granted') return;
+    const end = timer.startedAt + timer.limitMin * 60000;
+    const z = byId.get(timer.zoneId);
+    const name = z ? zoneName(z) : '';
+    const list = [
+      { id: 1, at: end - 10 * 60000, title: 'あと10分です', body: `${name}：${hmOf(new Date(end))}までです。車に戻る準備をしてください` },
+      { id: 2, at: end, title: '時間です', body: `${name}：${hmOf(new Date(end))}に最大時間になりました` },
+    ].filter(n => n.at > Date.now() + 5000);
+    if (list.length) await localNotify.schedule({ notifications: list.map(n => ({ id: n.id, title: n.title, body: n.body, schedule: { at: new Date(n.at), allowWhileIdle: true }, foreground: true })) });
+  } catch (e) { /* 予約できないときは画面の表示だけ */ }
+}
+// ブラウザでは、終わる10分前に1回だけ知らせる（許可がないときは画面の表示だけ）。アプリは予約した通知に任せる
 function tickTimer() {
   if (!$('#timer').hidden) updateTimer();
   updateTimerBtn();
-  if (!timer || timer.notified || Pro.gated() || !load('pmm-notify', false)) return;
+  if (localNotify || !timer || timer.notified || Pro.gated() || !load('pmm-notify', false)) return;
   const left = timer.startedAt + timer.limitMin * 60000 - Date.now();
   if (left > 10 * 60000 || left <= 0) return;
   timer.notified = true;
@@ -984,7 +1015,7 @@ function bind() {
     if (e.target.id !== 'tnotify') return;
     if (e.target.hasAttribute('data-locked')) { e.target.checked = false; Pro.openBuy(); return; }
     save('pmm-notify', e.target.checked);
-    if (e.target.checked) askNotify();
+    if (e.target.checked) askNotify().then(scheduleNotify); else scheduleNotify();
   });
 
   $('#locate').addEventListener('click', () => {
@@ -1035,7 +1066,7 @@ async function boot() {
   // カードが出て見えている範囲が変わったので、現在地へ寄せ直す（まだ地図を触っていなければ）
   const target = autoCentered || startHere;
   if (target && !state.moved) centerOn(target, map.getZoom());
-  Pro.init(); // 購入証を確かめる（購入から戻ってきたときの確認も）
+  Pro.init(); // App Store で有料プランを持っているか確かめる（通知の予約もそこで作り直す）
 }
 
 boot();
