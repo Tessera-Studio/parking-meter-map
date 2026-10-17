@@ -120,11 +120,17 @@
   const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>';
   const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
   const lockBadge = () => (P.gated() ? `<i class="lock" aria-hidden="true">${LOCK}</i>` : '');
-  // ☆ボタン（カード・詳細）。販売前は出さない
+  // ☆ボタン（詳細）。販売前は出さない
   P.starBtn = function (id, cls = '') {
     if (!P.shown) return '';
     const on = P.on && P.isFav(id);
     return `<button class="btn star${on ? ' on' : ''} ${cls}" type="button" data-act="fav" data-id="${esc(id)}" aria-label="お気に入り" aria-pressed="${on}">${STAR}${lockBadge()}</button>`;
+  };
+  // カードの区間名の右の星（見せるだけ。登録は詳細の☆で）：登録していれば黒い★、していなければ白い☆
+  P.starMark = function (id) {
+    if (!P.shown) return '';
+    const on = P.on && P.isFav(id);
+    return `<i class="cstar${on ? ' on' : ''}" data-star="${esc(id)}" role="img" aria-label="${on ? 'お気に入りに登録済み' : 'お気に入りに未登録'}">${STAR}</i>`;
   };
   P.placeStar = function () {
     if (!P.shown || !state.dest) return '';
@@ -136,6 +142,10 @@
     document.querySelectorAll('[data-act="fav"]').forEach(b => {
       const on = P.on && P.isFav(b.dataset.id);
       b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
+    });
+    document.querySelectorAll('[data-star]').forEach(b => {
+      const on = P.on && P.isFav(b.dataset.star);
+      b.classList.toggle('on', on); b.setAttribute('aria-label', on ? 'お気に入りに登録済み' : 'お気に入りに未登録');
     });
     document.querySelectorAll('[data-act="favplace"]').forEach(b => {
       const on = P.on && P.isPlaceFav(state.dest);
@@ -200,7 +210,7 @@
         <button class="funfav" type="button" data-unplace="${i}" aria-label="保存した行き先から外す">${STAR}</button>
       </div>`;
     $('#favBody').innerHTML = !sorted.length && !places.length
-      ? '<p class="fempty">カードの☆を押すと、ここに並びます</p>'
+      ? '<p class="fempty">詳細の☆を押すと、ここに並びます</p>'
       : `${sorted.map(zoneRow).join('')}${places.length ? `<h3>保存した行き先</h3>${places.map(placeRow).join('')}` : ''}`;
   }
 
@@ -280,7 +290,7 @@
       lead: 'よく使う区間と行き先を保存できます',
       icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" fill="currentColor"/></svg>',
       feats: [
-        ['いつもの区間をすぐ呼び出せる', 'カードの☆で保存。右下の★から一覧を開き、押すだけでその区間へ。'],
+        ['いつもの区間をすぐ呼び出せる', '詳細の☆で保存。右下の★から一覧を開き、押すだけでその区間へ。'],
         ['いまの状態も一覧で分かる', '保存した区間が、いま使えるか・何時までかを一覧に表示します。'],
         ['行き先も保存', '職場・取引先など、よく行く場所を10件まで保存できます。'],
       ],

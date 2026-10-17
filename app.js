@@ -306,22 +306,21 @@ function exclusions(z) {
   return z.rules.map(r => short(md(r.replace(/(を除く|は休止)$/, ''))).replace(/(\d+)日/g, '$1').replace(/[〜～]/g, '–').replace(/^(\d+)\/(\d+)–\1\/(\d+)$/, '$1/$2–$3')).filter(Boolean).join('、');
 }
 
-// カード：1段目に場所（状態はPの色）と料金の枠、2段目に利用時間・最大時間・除外日（アイコン付き・同じ幅）、3段目にボタン
+// カード：1段目に場所（状態はPの色）・お気に入りの星・料金の枠、2段目に利用時間・最大時間・除外日（アイコン付き・同じ幅）、3段目にボタン
 function cardHtml(r, i, n) {
   const { z, s } = r;
   const unk = z.days === 'unknown' || !z.span;
   const ex = unk ? '現地で確認' : exclusions(z) || 'なし';
   return `
     <article class="card ${s.a}${z.id === state.sel ? ' sel' : ''}" data-id="${esc(z.id)}" tabindex="0" aria-label="${esc(`${zoneName(z)}、${s.text}、${i + 1}件目／${n}件`)}">
-      <div class="chead"><i class="cp" aria-hidden="true">P</i><span class="cname">${esc(zoneName(z))}</span>${fmtFee(z) ? `<span class="cfee" aria-label="料金 ${esc(fmtFee(z))}">${I.yen}${esc(fmtFee(z))}</span>` : ''}</div>
+      <div class="chead"><i class="cp" aria-hidden="true">P</i><span class="cname">${esc(zoneName(z))}</span>${Pro.starMark(z.id)}${fmtFee(z) ? `<span class="cfee" aria-label="料金 ${esc(fmtFee(z))}">${I.yen}${esc(fmtFee(z))}</span>` : ''}</div>
       <div class="cinfo">
         <div>${I.clock}<b>${esc(unk ? '現地で確認' : z.hours)}</b><span>利用時間</span></div>
         <div>${I.timer}<b>${esc(fmtLimit(z) || '—')}</b><span>最大時間</span></div>
         <div>${I.cal}<b${ex.length > 6 ? ' class="sm"' : ''}>${esc(ex)}</b><span>除外日</span></div>
       </div>
-      <div class="cbtns${Pro.shown ? ' has-star' : ''}">
+      <div class="cbtns">
         <button class="btn inkbtn" type="button" data-act="go">${I.go}ここへ行く</button>
-        ${Pro.starBtn(z.id)}
         <button class="btn sub" type="button" data-act="detail">詳細</button>
       </div>
     </article>`;
