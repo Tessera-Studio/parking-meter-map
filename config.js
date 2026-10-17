@@ -4,13 +4,16 @@
    proShown：有料プランの機能（お気に入りの★・タイマー）を鍵付きで見せる。押すと説明のシート。
    storeProductId：App Store Connect（と Xcode の StoreKit 設定ファイル）に登録する商品 ID。買い切り（非消耗型）。
    legalPublished：特定商取引法の表記・プライバシーポリシーのページを公開したら true（シートにリンクを出す）。
-   adsEnabled：広告を始めたら true（アプリでは AdSense は使えないので、使うなら AdMob に替える）。 */
+   adsEnabled：広告（AdMob のバナー）を出す。詳細・タイマーを開いているあいだだけ、画面の一番下に出る。有料プランでは出ない。
+   admobBannerId：AdMob のバナーの広告ユニット ID。いまは Google のテスト用（本番は AdMob の管理画面で作った ID に替える）。
+   admobTesting：テスト広告として出す。本番の ID に替えたら false。
+   ※ AdMob のアプリ ID は ios/App/App/Info.plist の GADApplicationIdentifier（いまはテスト用）。 */
 window.PMM_CONFIG = {
   proEnabled: true,
   proShown: true,
   storeProductId: 'jp.tesseras.parkingmetermap.pro',
   legalPublished: false,
-  adsEnabled: false,
-  adsenseClient: '',
-  adsenseSlots: { detail: '', timer: '' },
+  adsEnabled: true,
+  admobBannerId: 'ca-app-pub-3940256099942544/2435281174',
+  admobTesting: true,
 };

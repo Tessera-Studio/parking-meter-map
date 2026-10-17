@@ -67,6 +67,14 @@ Android Studio で、右上のエミュレーター（Pixel など）を選ん�
 - **最初からやり直す**：同じ画面で購入を選んで削除（ゴミ箱）。アプリを消して入れ直すと、前回の記録も消える
 - **承認待ちを試す**：Products.storekit を開き、メニューの **Editor → Enable Ask To Buy**
 
+## 広告（AdMob）
+
+詳細とタイマーを開いているあいだだけ、画面の一番下に AdMob のバナーが出る（有料プランでは出ない。仕様は docs/pro-ads.md §16）。いまは **Google のテスト用 ID** なので、シミュレーターでは「Test Ad」と書かれた広告が出る（押してもお金は動かない）。
+
+- アプリ ID：`ios/App/App/Info.plist` の `GADApplicationIdentifier`（ない・間違っていると、アプリが起動してすぐ落ちる）
+- バナーの ID：`config.js` の `admobBannerId`。テスト広告：`admobTesting: true`
+- 本番にするときの手順：docs/pro-ads.md §23 の 6
+
 ## 画面を変えたとき
 
 画面のファイル（`app.js`・`styles.css` など）を変えたら、`npm run sync` で `www/` を作り直して `ios/`・`android/` に写す（`npm run ios` / `npm run android` は sync まで含む）。

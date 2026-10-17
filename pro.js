@@ -9,9 +9,9 @@
     proShown: false,       // 販売前でも、有料プランの機能を鍵付きで見せる（購入は「準備中」）
     storeProductId: 'jp.tesseras.parkingmetermap.pro', // App Store の商品 ID（買い切り・非消耗型）
     legalPublished: false, // 特商法の表記・プライバシーポリシーを公開したら true
-    adsEnabled: false,     // 広告を始めたら true
-    adsenseClient: '',     // ca-pub-…
-    adsenseSlots: { detail: '', timer: '' },
+    adsEnabled: false,     // 広告（AdMob）を出すなら true
+    admobBannerId: '',     // AdMob のバナーの広告ユニット ID（ca-app-pub-…/…）
+    admobTesting: true,    // テスト広告を出す（本番の ID にしたら false）
   }, window.PMM_CONFIG || {});
 
   const PRICE = '480円';
@@ -96,6 +96,7 @@
     }
     if (!$('#timer').hidden) renderTimer();
     if (!$('#favSheet').hidden) renderFav();
+    if (P.syncAds) P.syncAds();
   }
 
   /* ---------- 小さな札（トースト） ---------- */
@@ -185,9 +186,10 @@
     showPanel('');
     renderFav();
     $('#favSheet').hidden = false;
+    P.syncAds();
     $('#favClose').focus({ preventScroll: true });
   };
-  P.closeFav = () => { $('#favSheet').hidden = true; };
+  P.closeFav = () => { $('#favSheet').hidden = true; P.syncAds(); };
 
   function renderFav() {
     const from = state.here || visibleCenter();
@@ -254,8 +256,9 @@
     $('#buySheet').classList.remove('prosheet');
     $('#buySheet').innerHTML = html;
     $('#buyScrim').hidden = false;
+    P.syncAds();
   }
-  P.closeSheet = () => { $('#buyScrim').hidden = true; };
+  P.closeSheet = () => { $('#buyScrim').hidden = true; P.syncAds(); };
 
   // 有料プランのシート（「？」の購入・広告を消す・鍵の付いた機能から）。紺の帯に機能の見本、機能、値段、購入の順
   const PI = {
@@ -428,27 +431,48 @@
       <button class="cancel" type="button" data-cancel>閉じる</button>`);
   };
 
-  /* ---------- 広告（詳細の一番下・タイマーの一番下だけ） ---------- */
-  let adsLoaded = false;
-  P.adSlot = function (kind) {
-    if (!CFG.adsEnabled || P.on || !CFG.adsenseClient) return '';
-    return `<div class="adbox"><span class="adlabel">広告</span>
-      <ins class="adsbygoogle" style="display:block;width:100%;height:100px" data-ad-client="${esc(CFG.adsenseClient)}" data-ad-slot="${esc(CFG.adsenseSlots[kind] || '')}"></ins></div>
-      ${P.shown ? '<button class="adoff" type="button" data-gopro>広告を消す（有料プラン）</button>' : ''}`;
-  };
-  // 詳細かタイマーを初めて開いたときに広告のスクリプトを読み込む（Pro のときは読み込まない）
-  P.fillAds = function (root) {
-    if (!CFG.adsEnabled || P.on || !CFG.adsenseClient || !root) return;
-    if (!adsLoaded) {
-      adsLoaded = true;
-      const s = document.createElement('script');
-      s.async = true;
-      s.crossOrigin = 'anonymous';
-      s.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(CFG.adsenseClient)}`;
-      document.head.appendChild(s);
-    }
-    root.querySelectorAll('ins.adsbygoogle:not([data-adsbygoogle-status])').forEach(() => {
-      try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) {}
+  /* ---------- 広告（AdMob のバナー。詳細・タイマーを開いているあいだだけ、画面の一番下に） ---------- */
+  // バナーはネイティブの表示で、画面のいちばん下に重なる。高さは --ad-h に入れ、詳細のシートの下に同じだけ余白を空ける
+  const admob = cap && cap.isNativePlatform && cap.isNativePlatform() && cap.Plugins && cap.Plugins.AdMob || null;
+  const adsOn = () => !!(CFG.adsEnabled && admob && CFG.admobBannerId && !P.on);
+  let adState = 'none'; // none（まだ出していない）・shown・hidden
+  let adInit = null;
+  function setAdH(h) { document.documentElement.style.setProperty('--ad-h', `${Math.max(0, Math.round(h || 0))}px`); }
+  async function initAds() {
+    if (!adInit) adInit = (async () => {
+      await admob.initialize({ initializeForTesting: !!CFG.admobTesting });
+      try {
+        await admob.addListener('bannerAdSizeChanged', info => setAdH(adState === 'shown' ? info && info.height : 0));
+        await admob.addListener('bannerAdFailedToLoad', () => setAdH(0));
+      } catch (e) {}
+    })();
+    return adInit;
+  }
+  // いま広告を出してよいか：詳細かタイマーを開いていて、ほかのシート（購入・「ここへ行く」・お気に入り）が上にないとき
+  function wantAd() {
+    if (!adsOn()) return false;
+    const open = id => { const e = document.getElementById(id); return e && !e.hidden; };
+    if (open('buyScrim') || open('goScrim') || open('favSheet')) return false;
+    return (typeof state !== 'undefined' && state.detail) || open('timer');
+  }
+  let adBusy = Promise.resolve();
+  P.syncAds = function () {
+    if (!admob) return;
+    adBusy = adBusy.then(async () => {
+      try {
+        const want = wantAd();
+        if (want && adState !== 'shown') {
+          await initAds();
+          const first = adState === 'none';
+          adState = 'shown'; // 高さの知らせが表示の途中で届くので、先に切り替える
+          if (first) await admob.showBanner({ adId: CFG.admobBannerId, adSize: 'ADAPTIVE_BANNER', position: 'BOTTOM_CENTER', margin: 0, isTesting: !!CFG.admobTesting });
+          else await admob.resumeBanner();
+        } else if (!want && adState === 'shown') {
+          await admob.hideBanner();
+          adState = 'hidden';
+          setAdH(0);
+        }
+      } catch (e) { setAdH(0); }
     });
   };
 
@@ -457,8 +481,6 @@
     $('#favBtn').addEventListener('click', P.openFav);
     $('#favSheet').addEventListener('click', onFavClick);
     $('#buyScrim').addEventListener('click', onSheetClick);
-    // 「広告を消す（Pro）」（詳細・タイマーの中）
-    document.addEventListener('click', e => { if (e.target.closest('.adoff[data-gopro]')) P.openBuy(); });
     $('#destTag').addEventListener('click', e => { if (e.target.closest('[data-act="favplace"]')) P.togglePlace(); });
   };
 
