@@ -306,19 +306,18 @@ function exclusions(z) {
   return z.rules.map(r => short(md(r.replace(/(を除く|は休止)$/, ''))).replace(/(\d+)日/g, '$1').replace(/[〜～]/g, '–').replace(/^(\d+)\/(\d+)–\1\/(\d+)$/, '$1/$2–$3')).filter(Boolean).join('、');
 }
 
-// カード：1段目に場所（状態はPの色）、2段目に利用時間・最大時間・料金・除外日（アイコン付き）、3段目にボタン
+// カード：1段目に場所（状態はPの色）と料金の枠、2段目に利用時間・最大時間・除外日（アイコン付き・同じ幅）、3段目にボタン
 function cardHtml(r, i, n) {
   const { z, s } = r;
   const unk = z.days === 'unknown' || !z.span;
   const ex = unk ? '現地で確認' : exclusions(z) || 'なし';
   return `
     <article class="card ${s.a}${z.id === state.sel ? ' sel' : ''}" data-id="${esc(z.id)}" tabindex="0" aria-label="${esc(`${zoneName(z)}、${s.text}、${i + 1}件目／${n}件`)}">
-      <div class="chead"><i class="cp" aria-hidden="true">P</i><span class="cname">${esc(zoneName(z))}</span></div>
+      <div class="chead"><i class="cp" aria-hidden="true">P</i><span class="cname">${esc(zoneName(z))}</span>${fmtFee(z) ? `<span class="cfee" aria-label="料金 ${esc(fmtFee(z))}">${esc(fmtFee(z))}</span>` : ''}</div>
       <div class="cinfo">
         <div>${I.clock}<b>${esc(unk ? '現地で確認' : z.hours)}</b><span>利用時間</span></div>
         <div>${I.timer}<b>${esc(fmtLimit(z) || '—')}</b><span>最大時間</span></div>
-        <div>${I.yen}<b>${esc(fmtFee(z) || '—')}</b><span>料金</span></div>
-        <div>${I.cal}<b>${esc(ex)}</b><span>除外日</span></div>
+        <div>${I.cal}<b${ex.length > 6 ? ' class="sm"' : ''}>${esc(ex)}</b><span>除外日</span></div>
       </div>
       <div class="cbtns${Pro.shown ? ' has-star' : ''}">
         <button class="btn inkbtn" type="button" data-act="go">${I.go}ここへ行く</button>
@@ -467,8 +466,7 @@ function hours(z, t) {
   const ex = z.rules.filter(Boolean);
   if (z.months && !ex.some(x => /休止/.test(x))) ex.push(`${z.months[1] % 12 + 1}月〜${(z.months[0] + 10) % 12 + 1}月は利用不可`);
   return `<div class="hours"><h3>利用できる時間</h3>${rows.map(([k, v, on]) =>
-    `<div class="${on && v ? 'on' : ''}"><span>${k}</span>${v ? `<b>${esc(v)}</b>` : '<span class="x">利用不可</span>'}</div>`).join('')}${ex.map(x =>
-    `<p class="hex">${esc(x)}</p>`).join('')}</div>`;
+    `<div class="${on && v ? 'on' : ''}"><span>${k}</span>${v ? `<b>${esc(v)}</b>` : '<span class="x">利用不可</span>'}</div>`).join('')}${ex.length ? `<p class="hex">${esc(ex.join('、'))}</p>` : ''}</div>`;
 }
 
 function stateBlock(z, t) {
@@ -540,7 +538,7 @@ function openDetail(z) {
   $('#dsheet').scrollTop = 0;
   draw();
   map.flyToBounds(z.bounds, { maxZoom: 17, duration: .45, ...pad() });
-  $('#dback').focus({ preventScroll: true });
+  $('#dsheet .dclose').focus({ preventScroll: true });
 }
 
 // 詳細を閉じる。積んだ履歴が残っていれば「戻る」で閉じる（popstate から closeDetail が呼ばれる）
@@ -968,7 +966,6 @@ function bind() {
     const c = e.target.closest('.card[data-id]');
     if (c && e.target === c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); select(c.dataset.id, { pan: true }); }
   });
-  $('#dback').addEventListener('click', leaveDetail);
   $('#dsheet').addEventListener('click', e => {
     if (e.target.closest('[data-close]')) leaveDetail();
     const f = e.target.closest('[data-act="fav"]');
