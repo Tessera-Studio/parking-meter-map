@@ -97,6 +97,6 @@ Android Studio で、右上のエミュレーター（Pixel など）を選ん�
 2. ~~有料プランをストアの購入に~~（済み：StoreKit 2・@capgo/native-purchases。Stripe・Cloudflare の仕組みとメールでの復元はやめた。docs/pro-ads.md §15.6）。残り：App Store Connect に商品を登録して、Sandbox の Apple ID で実機で試す（docs/pro-ads.md §23）
 3. ~~タイマーの通知を、アプリの通知に~~（済み）
 4. ~~「ここへ行く」で地図アプリを確実に開く~~（済み：@capacitor/app-launcher。シミュレーターには Google マップのアプリがないので、Google は Safari で開く）
-5. ~~アイコン・起動画面~~（済み：iPhone。明るい青（#0A6CE8）の地に、白い地図のピンとパーキング・メーター。起動画面は名前「メーターマップ」とひとこと「路上パーキングを、もっとかんたんに。」、下に街の通りのイラスト。作り直すときは `PLAYWRIGHT=… FONTS=… node build/app-icons/render.js`（書体は @fontsource/zen-kaku-gothic-new を展開したフォルダ。スクリプトの先頭に説明）。Android は Android 版を作るときに）
+5. ~~アイコン・起動画面~~（済み：iPhone。渡されたデザイン `build/app-icons/source/design-2026-10-18.webp` による。アイコンは線で描き直したもの（`node build/app-icons/render.js`）、起動画面はデザインの右半分を拡大して使う（`python3 build/app-icons/splash-from-design.py`）。Android は Android 版を作るときに）
 6. Web 版をやめる：GitHub の **Settings → Pages** で公開を止める
 7. App Store・Google Play への申請（ストアの説明文・スクリーンショット・プライバシーの申告）
