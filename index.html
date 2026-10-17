@@ -14,14 +14,14 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="vendor/maplibre-gl.css?v=afb6efe2">
 <link rel="stylesheet" href="vendor/leaflet.css?v=ec929f11">
-<link rel="stylesheet" href="styles.css?v=e64f3f3d">
+<link rel="stylesheet" href="styles.css?v=5a73d92d">
 </head>
 <body>
 
 <main class="app">
   <div id="map"></div>
 
-  <!-- 上：検索・タイマー -->
+  <!-- 上：検索・ヘルプ（？） -->
   <div class="top" id="top">
     <div class="toprow">
       <form class="search" id="qform" role="search">
@@ -30,7 +30,7 @@
         <input id="q" type="search" enterkeyhint="search" autocomplete="off" placeholder="行き先・駅名で探す" aria-label="行き先・駅名で探す" aria-controls="qpanel">
         <button class="qclear" id="qclear" type="button" aria-label="行き先を消す" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </form>
-      <button class="ctl timerbtn" id="timerBtn" type="button" aria-label="タイマー"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg><i class="dot" aria-hidden="true"></i></button>
+      <button class="ctl helpbtn" id="helpBtn" type="button" aria-label="ヘルプ・このアプリについて">?</button>
     </div>
     <div class="qpanel" id="qpanel" hidden></div>
   </div>
@@ -38,9 +38,8 @@
   <!-- 右上：お気に入りの一覧（Pro。販売前は出さない） -->
   <button class="ctl favbtn" id="favBtn" type="button" aria-label="お気に入りの一覧" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" fill="currentColor"/></svg><i class="lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></i></button>
 
-  <!-- 右下：地図の切り替え・現在地 -->
+  <!-- 右下：現在地 -->
   <div class="mapctl" id="mapctl">
-    <button class="round" id="baseBtn" type="button" aria-pressed="false" aria-label="地図の表示を切り替え（いまはシンプル）" title="地図の表示を切り替え"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
     <button class="round" id="locate" type="button" aria-label="現在地へ"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
   </div>
 
@@ -92,7 +91,7 @@
 <script src="vendor/leaflet-maplibre-gl.js?v=e79b564d"></script>
 <script src="basemap.js?v=9b93e0b7"></script>
 <script src="zones.js?v=0a80f9b4"></script>
-<script src="pro.js?v=27a731bc"></script>
-<script src="app.js?v=3aa8cd33"></script>
+<script src="pro.js?v=3ed3e217"></script>
+<script src="app.js?v=95f0ae03"></script>
 </body>
 </html>
