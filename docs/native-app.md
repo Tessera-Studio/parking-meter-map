@@ -39,6 +39,8 @@ npm run sync         # www/ を作って両方にコピーだけする
 
 ## 初めて出すまで
 
+App Store に出す順番（商号変更のあいだにできること・公開の時期）は [app-store-plan.md](app-store-plan.md)。
+
 ### 用意するもの
 
 - Mac と Xcode（iOS のビルド・提出に必須）、Android Studio

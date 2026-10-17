@@ -6,7 +6,8 @@
     "build": "node scripts/build-www.mjs",
     "sync": "node scripts/build-www.mjs && cap sync",
     "ios": "node scripts/build-www.mjs && cap sync ios && cap open ios",
-    "android": "node scripts/build-www.mjs && cap sync android && cap open android"
+    "android": "node scripts/build-www.mjs && cap sync android && cap open android",
+    "screenshots": "node scripts/screenshots.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",
@@ -17,6 +18,7 @@
     "@revenuecat/purchases-capacitor": "^13.7.4"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.5.3"
+    "@capacitor/cli": "^8.5.3",
+    "playwright": "^1.56.1"
   }
 }

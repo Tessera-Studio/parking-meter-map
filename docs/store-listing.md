@@ -10,7 +10,7 @@ App Store Connect と Play Console にそのまま貼れる形にしています
 | カテゴリ | ナビゲーション（サブ：旅行） | 地図＆ナビ |
 | 年齢 | 4+ | 全ユーザー対象（IARC） |
 | 価格 | 無料（Pro はアプリ内課金） | 無料（アプリ内課金あり） |
-| サポート URL | Web 版の URL（「？」の内容と同じ） | 同じ |
+| サポート URL | Web 版の support.html | 同じ |
 | サポートのメール | support@tesseras.jp | support@tesseras.jp |
 | プライバシーポリシー | Web 版の privacy.html（docs/pro-ads.md §18） | 同じ |
 | 著作権表示 | © 2026 Tessera Studio | — |
@@ -192,8 +192,16 @@ When Pro goes on sale in the app, add before "Coverage":
 
 ## スクリーンショット
 
-App Store は 6.9インチ（1320×2868）があれば、ほかの iPhone の大きさに使われます。Google Play はスマホ用を2〜8枚（9:16 など）。
-シミュレーター（iPhone 17 Pro Max など）で撮り、上に一行の見出しを付けます。
+App Store は 6.9インチ（1320×2868）があれば、ほかの iPhone の大きさに使われます（アプリは iPhone 専用なので iPad 用は要りません）。Google Play はスマホ用を2〜8枚（9:16 など）。
+
+Mac で次を実行すると、下の6枚を撮って見出しを付けます（`store/screenshots/ja/`・`en/`。見出しなしは `raw/`）。時刻は平日の昼、現在地は銀座に固定しています。
+
+```bash
+npx playwright install chromium   # 初回だけ
+npm run build && npm run screenshots
+```
+
+シミュレーター（iPhone 17 Pro Max など）で撮ってもかまいません。
 
 | # | 画面 | 見出し（日本語） | Caption (English) |
 |---|---|---|---|
@@ -204,7 +212,7 @@ App Store は 6.9インチ（1320×2868）があれば、ほかの iPhone の大
 | 5 | 「ここへ行く」のシート | Apple マップ・Google マップで案内 | Directions in Apple or Google Maps |
 | 6 | 大阪または札幌を引いたところ | 東京・大阪・神奈川・札幌・京都 | Tokyo, Osaka, Kanagawa, Sapporo, Kyoto |
 
-撮る前に：時刻を平日の昼（使える区間が多い）にし、通知・電波の表示をきれいにする（`xcrun simctl status_bar booted override --time 9:41 --batteryLevel 100`）。
+シミュレーターで撮るときは：時刻を平日の昼（使える区間が多い）にし、通知・電波の表示をきれいにする（`xcrun simctl status_bar booted override --time 9:41 --batteryLevel 100`）。
 
 ---
 

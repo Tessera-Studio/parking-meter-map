@@ -685,7 +685,7 @@ function renderTimer() {
       </div>
       <div class="tnotify">
         <label class="switch${locked ? ' locked' : ''}"><span>終わる10分前に知らせる${locked ? `<i class="lock" aria-label="Pro の機能">${svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>')}</i>` : ''}</span><input type="checkbox" id="tnotify" role="switch"${notify ? ' checked' : ''}${locked ? ' data-locked' : ''}></label>
-        <small>ホーム画面に追加すると、画面を閉じていても届きます</small>
+        <small>${window.Native ? 'アプリを閉じていても、終わる10分前と時間になったときに届きます' : 'ホーム画面に追加すると、画面を閉じていても届きます'}</small>
       </div>
       <button class="btn sub big" type="button" id="tcar"${running ? '' : ' disabled'}>${I.pin}車の場所を確認</button>
       <p class="tfoot">メーター・チケットに表示された時刻が優先です</p>
