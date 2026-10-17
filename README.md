@@ -20,7 +20,7 @@
 
 見た目は白い角丸のカードに薄い影。色は緑（使える）・赤（時間外）・グレー（時間不明）・黄（選んだ区間）だけです。
 
-**Pro（480円・買い切り）と広告**の仕組みも入っています（タイマー・お気に入り・広告なし。無料のときはボタンは見え、押すと説明と「有料プランを購入」のシート。[docs/pro-ads.md](docs/pro-ads.md)）。いまは販売前で（`config.js` の `proEnabled: false`）、★とタイマーは鍵付きで見え、購入は「準備中」の札を出すだけです（`proShown: true`）。始める手順は docs/pro-ads.md §23。
+**有料プラン（480円・買い切り）**：タイマー・お気に入り・広告なし。購入は App Store のアプリ内課金（StoreKit 2）で、サーバーは使いません。無料のときはボタンが鍵付きで見え、押すと説明と購入のシートが出ます（[docs/pro-ads.md](docs/pro-ads.md)）。シミュレーターでの試し方は [docs/app.md](docs/app.md)、販売までの手順は docs/pro-ads.md §23。
 
 ## データ
 
@@ -120,12 +120,9 @@ index.html        画面
 app.js            アプリ本体（Leaflet）
 zones.js          GeoJSON をアプリの形にそろえる
 styles.css        スタイル（いつも明るい配色）
-config.js         設定（Pro の販売・広告の開始、購入証の公開鍵、AdSense の ID）
+config.js         設定（有料プランの販売・App Store の商品 ID・広告）
 basemap.js        地図の下地（ベクトル地図）の配色とラベル
-pro.js            Pro・お気に入り・広告・「このアプリについて」
-functions/api/    Pro の API（Cloudflare Pages Functions：checkout・verify・restore）
-lib/pro-server.js Pro の API の共通部分（Stripe・購入証の署名・回数の記録）
-scripts/pro-keys.mjs  購入証の鍵（ECDSA P-256）を作る
+pro.js            有料プラン（App Store の購入）・お気に入り・広告・「このアプリについて」
 docs/drafts/      特定商取引法に基づく表記・プライバシーポリシーの下書き（公開前）
 data/zones.geojson  752区間（build/build.py が作る）
 data/holidays.json  祝日一覧（「いま使える」の判定に使う）

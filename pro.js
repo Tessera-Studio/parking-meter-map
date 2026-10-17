@@ -1,13 +1,15 @@
-/* Pro・お気に入り・広告・「このアプリについて」（docs/pro-ads.md）
-   設定は config.js の window.PMM_CONFIG。販売前（proEnabled: false）でも、proShown: true なら
-   お気に入りの★・タイマーを鍵付きで見せる（購入は「準備中」）。proShown: false なら、これまでどおりの画面（タイマーも無料）。販売中は、タイマーとお気に入りが有料プランの機能。app.js より先に読み込み、app.js の関数は呼ばれたときに使う。 */
+/* 有料プラン・お気に入り・広告・「このアプリについて」（docs/pro-ads.md）
+   設定は config.js の window.PMM_CONFIG。購入は App Store（StoreKit 2。@capgo/native-purchases）。
+   買い切りの商品（storeProductId）を持っているかを、起動時とストアからの知らせのたびに端末の中で確かめる（サーバーは使わない）。
+   proShown: true なら、お気に入りの★・タイマーを鍵付きで見せる。proEnabled: false のあいだは、購入ボタンは「準備中」の札だけ。
+   app.js より先に読み込み、app.js の関数は呼ばれたときに使う。 */
 (function () {
   const CFG = Object.assign({
-    proEnabled: false,     // 販売を始めたら true（Stripe・Cloudflare の準備ができてから）
+    proEnabled: false,     // 販売を始めたら true（App Store Connect に商品を登録してから）
     proShown: false,       // 販売前でも、有料プランの機能を鍵付きで見せる（購入は「準備中」）
-    adsEnabled: false,     // AdSense の審査が通ったら true
-    proPublicKey: null,    // 購入証の署名を確かめる公開鍵（JWK）。scripts/pro-keys.mjs で作る
-    apiBase: '/api',
+    storeProductId: 'jp.tesseras.parkingmetermap.pro', // App Store の商品 ID（買い切り・非消耗型）
+    legalPublished: false, // 特商法の表記・プライバシーポリシーを公開したら true
+    adsEnabled: false,     // 広告を始めたら true
     adsenseClient: '',     // ca-pub-…
     adsenseSlots: { detail: '', timer: '' },
   }, window.PMM_CONFIG || {});
@@ -17,7 +19,7 @@
   const SELLER_SHORT = 'Tessera Studio';
   const SUPPORT = 'support@tesseras.jp';
   const FAV_MAX = 50, PLACE_MAX = 10;
-  const K = { pro: 'pmm.pro', favZones: 'pmm.favZones', favPlaces: 'pmm.favPlaces' };
+  const K = { pro: 'pmm.pro.store', favZones: 'pmm.favZones', favPlaces: 'pmm.favPlaces' };
 
   // 販売前の確認用：?preview=free（無料の人の見え方）／?preview=pro（Pro の見え方）。販売を始めたら効かない
   let preview = null;
@@ -31,55 +33,53 @@
 
   const P = {
     cfg: CFG, PRICE, SELLER, SELLER_SHORT, SUPPORT,
-    on: preview === 'pro',      // Pro か
-    iat: null,                  // 購入証の発行日時（秒）
+    on: preview === 'pro',      // 有料プランを持っているか
+    iat: null,                  // 購入日時（秒）
+    preview: !!preview,
     shown: CFG.proEnabled || CFG.proShown || !!preview, // お気に入り・鍵・購入シートを出すか
     gated() { return this.shown && !this.on; },
   };
 
-  /* ---------- 購入証（ライセンス）：base64url(JSON) + "." + base64url(ECDSA P-256 署名) ---------- */
-  const b64u = {
-    dec(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), c => c.charCodeAt(0)); },
-  };
-  async function checkLicense(lic) {
+  /* ---------- App Store の購入（StoreKit 2） ---------- */
+  // アプリの中だけで使える。ブラウザで開いたときは null（購入ボタンは案内の札を出す）
+  const cap = window.Capacitor;
+  const store = cap && cap.isNativePlatform && cap.isNativePlatform() && cap.Plugins && cap.Plugins.NativePurchases || null;
+  P.store = !!store;
+  let busy = false;
+
+  // 持っているか：StoreKit の「いま有効な購入」（返金されたものは入らない。署名を確かめたものだけ）に商品があるか
+  async function refreshOwned() {
+    if (!store || P.preview) return;
     try {
-      if (!lic || !CFG.proPublicKey || !crypto.subtle) return null;
-      const [p, s] = String(lic).split('.');
-      if (!p || !s) return null;
-      const key = await crypto.subtle.importKey('jwk', CFG.proPublicKey, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
-      const ok = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, key, b64u.dec(s), new TextEncoder().encode(p));
-      if (!ok) return null;
-      const body = JSON.parse(new TextDecoder().decode(b64u.dec(p)));
-      return body && body.v === 1 && body.pid ? body : null;
-    } catch (e) { return null; }
+      const { purchases } = await store.getPurchases({ productType: 'inapp', onlyCurrentEntitlements: true });
+      const t = (purchases || []).find(x => x.productIdentifier === CFG.storeProductId);
+      setOwned(t ? { at: Date.parse(t.purchaseDate) || Date.now() } : null);
+    } catch (e) { /* 確かめられないときは、前回の結果のまま */ }
   }
-  // 購入証を保存して確かめる。正しければ Pro にする
-  async function adopt(lic) {
-    const body = await checkLicense(lic);
-    if (!body) return false;
-    try { localStorage.setItem(K.pro, lic); } catch (e) {}
-    P.on = true; P.iat = body.iat;
-    afterChange();
-    return true;
+  function setOwned(o) {
+    const was = P.on;
+    P.on = !!o;
+    P.iat = o ? Math.floor(o.at / 1000) : null;
+    try { o ? localStorage.setItem(K.pro, JSON.stringify(o)) : localStorage.removeItem(K.pro); } catch (e) {}
+    if (was !== P.on) afterChange();
+  }
+  // 値段はストアの表示（端末の国・通貨）に合わせる。取れないときは 480円 のまま
+  async function loadPrice() {
+    if (!store) return;
+    try {
+      const { products } = await store.getProducts({ productIdentifiers: [CFG.storeProductId], productType: 'inapp' });
+      if (products && products[0] && products[0].priceString) P.PRICE = products[0].priceString;
+    } catch (e) {}
   }
 
-  // 起動時：保存してある購入証を確かめる（壊れている・消えているときは黙って無料に戻す）。購入から戻ってきたときの処理も
+  // 起動時：前回の結果ですぐ画面を出し、ストアで確かめ直す。ほかの端末での購入・返金・保護者の承認もここで受け取る
   P.init = async function () {
-    if (CFG.proEnabled) {
-      let lic = null;
-      try { lic = localStorage.getItem(K.pro); } catch (e) {}
-      const body = await checkLicense(lic);
-      if (body) { P.on = true; P.iat = body.iat; }
-      const q = new URLSearchParams(location.search);
-      if (q.get('pro') === 'success' && q.get('sid')) {
-        try {
-          const r = await fetch(`${CFG.apiBase}/verify?sid=${encodeURIComponent(q.get('sid'))}`);
-          const j = await r.json();
-          if (r.ok && j.license && await adopt(j.license)) P.toast('有料プランになりました。ありがとうございます');
-          else if (j.error === 'limit') P.toast(`発行できる台数の上限に達しました。${SUPPORT} までお問い合わせください`, { ms: 6000 });
-        } catch (e) { P.toast('購入の確認ができませんでした。「このアプリについて」の「購入の復元」からお試しください', { ms: 6000 }); }
-        try { history.replaceState(history.state, '', location.pathname); } catch (e) {}
-      }
+    if (store && !P.preview) {
+      try { const o = JSON.parse(localStorage.getItem(K.pro) || 'null'); if (o) { P.on = true; P.iat = Math.floor(o.at / 1000); } } catch (e) {}
+      afterChange();
+      try { await store.addListener('transactionUpdated', () => refreshOwned()); } catch (e) {}
+      await Promise.all([refreshOwned(), loadPrice()]);
+      return;
     }
     afterChange();
   };
@@ -248,8 +248,8 @@
   }
 
   /* ---------- 購入シート・復元 ---------- */
-  // 特定商取引法の表記・プライバシーポリシーは、販売を始めるときに公開する（それまではリンクを出さない）
-  const legalLinks = () => !CFG.proEnabled ? '' : '<p class="blegal"><a href="legal.html" target="_blank" rel="noopener">特定商取引法に基づく表記</a><a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a></p>';
+  // 特定商取引法の表記・プライバシーポリシーは、ページを公開するまでリンクを出さない（config.js の legalPublished）
+  const legalLinks = () => !CFG.legalPublished ? '' : '<p class="blegal"><a href="legal.html" target="_blank" rel="noopener">特定商取引法に基づく表記</a><a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a></p>';
   function openSheet(html) {
     $('#buySheet').classList.remove('prosheet');
     $('#buySheet').innerHTML = html;
@@ -314,10 +314,10 @@
       </div>
       <ul class="ufeat">${u.feats.map(([ic, b, t]) => `<li><i aria-hidden="true">${ic}</i><div><b>${b}</b><span>${t}</span></div></li>`).join('')}</ul>
       <div class="uprice">
-        <p><b>${PRICE}</b><span>買い切り・月額なし</span></p>
+        <p><b>${P.PRICE}</b><span>買い切り・月額なし</span></p>
         <ul aria-label="有料プランに含まれるもの">${incl.map(([k, t]) => `<li${k === kind ? ' class="cur"' : ''}>${I.check}${t}</li>`).join('')}</ul>
       </div>
-      <button class="btn brand big" type="button" data-buy>${PRICE}で購入する</button>
+      <button class="btn brand big" type="button" data-buy>${P.PRICE}で購入する</button>
       <p class="bnote">地図と時間の表示は、これまでどおり無料です</p>
       <button class="blink" type="button" data-restore>購入済みの方はこちら（復元）</button>
       ${legalLinks()}`);
@@ -337,41 +337,38 @@
     proSheet(kind);
   };
 
-  P.openRestore = function () {
-    openSheet(`
-      <h2 id="buyTitle">購入の復元</h2>
-      <form class="rform" id="restoreForm">
-        <label for="restoreEmail">購入のときに入力したメールアドレス</label>
-        <input id="restoreEmail" type="email" inputmode="email" autocomplete="email" required>
-        <button class="btn dark big" type="submit">復元する</button>
-        <p class="rmsg" id="restoreMsg" aria-live="polite"></p>
-      </form>
-      <button class="cancel" type="button" data-cancel>閉じる</button>`);
-    $('#restoreEmail').focus();
-  };
-
+  const READY = '有料プランの購入は準備中です。もうしばらくお待ちください';
   async function checkout() {
-    if (!CFG.proEnabled) return P.toast('有料プランの購入は準備中です。もうしばらくお待ちください');
+    if (!CFG.proEnabled) return P.toast(READY);
+    if (!store) return P.toast('購入は iPhone のアプリから行えます');
+    if (busy) return;
+    busy = true;
     try {
-      const r = await fetch(`${CFG.apiBase}/checkout`, { method: 'POST' });
-      const j = await r.json();
-      if (r.ok && j.url) location.href = j.url;
-      else throw new Error();
-    } catch (e) { P.toast('購入の画面を開けませんでした。通信状態を確かめてください'); }
+      await store.purchaseProduct({ productIdentifier: CFG.storeProductId, productType: 'inapp', quantity: 1 });
+      await refreshOwned();
+      if (P.on) { P.closeSheet(); P.toast('有料プランになりました。ありがとうございます'); }
+    } catch (e) {
+      const m = String(e && (e.message || e) || '');
+      if (/cancel/i.test(m)) { /* 自分でやめたときは何も出さない */ }
+      else if (/pending/i.test(m)) P.toast('承認待ちです。承認されると、自動で使えるようになります', { ms: 5000 });
+      else P.toast('購入できませんでした。通信状態を確かめて、もう一度お試しください', { ms: 5000 });
+    } finally { busy = false; }
   }
 
-  async function restore(email) {
-    const msg = $('#restoreMsg');
-    if (!CFG.proEnabled) { msg.textContent = '有料プランの購入は準備中です。もうしばらくお待ちください'; return; }
-    msg.textContent = '確認しています…';
+  // 購入の復元：App Store の購入履歴と同期して、持っているか確かめ直す（同じ Apple ID なら機種変更のあとも使える）
+  async function restore() {
+    if (!CFG.proEnabled) return P.toast(READY);
+    if (!store) return P.toast('復元は iPhone のアプリから行えます');
+    if (busy) return;
+    busy = true;
+    P.toast('App Store に確認しています…', { ms: 8000 });
     try {
-      const r = await fetch(`${CFG.apiBase}/restore`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email }) });
-      const j = await r.json().catch(() => ({}));
-      if (r.ok && j.license && await adopt(j.license)) { P.closeSheet(); P.toast('有料プランを復元しました'); return; }
-      msg.textContent = j.error === 'limit' ? `発行できる台数の上限に達しました。${SUPPORT} までお問い合わせください`
-        : j.error === 'rate' ? 'しばらく待ってから、もう一度お試しください'
-        : 'このメールアドレスでの購入が見つかりませんでした';
-    } catch (e) { msg.textContent = '通信できませんでした。通信状態を確かめてください'; }
+      await store.restorePurchases();
+      await refreshOwned();
+      if (P.on) { P.closeSheet(); P.toast('有料プランを復元しました'); }
+      else P.toast('この Apple ID での購入は見つかりませんでした', { ms: 5000 });
+    } catch (e) { P.toast('App Store に接続できませんでした。もう一度お試しください', { ms: 5000 }); }
+    finally { busy = false; }
   }
 
   function onSheetClick(e) {
@@ -380,7 +377,7 @@
     if (!b) return;
     if (b.hasAttribute('data-cancel')) P.closeSheet();
     else if (b.hasAttribute('data-buy')) checkout();
-    else if (b.hasAttribute('data-restore')) P.openRestore();
+    else if (b.hasAttribute('data-restore')) restore();
     else if (b.hasAttribute('data-gopro')) P.openBuy();
   }
 
@@ -413,14 +410,14 @@
   P.openAbout = function () {
     const proRow = !P.shown ? ''
       : P.on ? `<div class="arow"><b>有料プランをご利用中です</b>${P.iat ? `<small>購入日 ${new Date(P.iat * 1000).toLocaleDateString('ja-JP')}</small>` : ''}</div>`
-      : `<button class="arow btnrow" type="button" data-gopro><b>有料プランを購入（${PRICE}）</b><small>タイマー・お気に入り・広告なし</small></button>`;
+      : `<button class="arow btnrow" type="button" data-gopro><b>有料プランを購入（${P.PRICE}）</b><small>タイマー・お気に入り・広告なし</small></button>`;
     const credit = typeof mapCredit === 'function' ? mapCredit() : '';
     openSheet(`
       <h2 id="buyTitle">ヘルプ</h2>
       ${proRow}
       ${P.shown ? '<button class="arow btnrow" type="button" data-restore><b>購入の復元</b></button>' : ''}
       <h3>よくある質問</h3>
-      <div class="faq">${(P.shown ? [['有料プランでは何ができますか？', `タイマーとお気に入りが使えるようになり、広告も出なくなります。${PRICE}の買い切りです。地図と時間の表示は、これまでどおり無料です。`], ...P.FAQ] : P.FAQ).map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div>
+      <div class="faq">${(P.shown ? [['有料プランでは何ができますか？', `タイマーとお気に入りが使えるようになり、広告も出なくなります。${P.PRICE}の買い切りです。地図と時間の表示は、これまでどおり無料です。`], ...P.FAQ] : P.FAQ).map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div>
       <h3>このアプリについて</h3>
       <ul class="asrc">${P.SOURCES.map(([k, t, l, u]) => `<li><b>${k}</b>${esc(t)}${u ? ` <a href="${u}" target="_blank" rel="noopener">${l}</a>` : ''}</li>`).join('')}
         <li><b>地図</b>${credit}。区間の線は OpenStreetMap から作成。表示に <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>・<a href="https://maplibre.org" target="_blank" rel="noopener">MapLibre</a> を使っています。</li>
@@ -460,7 +457,6 @@
     $('#favBtn').addEventListener('click', P.openFav);
     $('#favSheet').addEventListener('click', onFavClick);
     $('#buyScrim').addEventListener('click', onSheetClick);
-    $('#buyScrim').addEventListener('submit', e => { if (e.target.id === 'restoreForm') { e.preventDefault(); restore($('#restoreEmail').value.trim()); } });
     // 「広告を消す（Pro）」（詳細・タイマーの中）
     document.addEventListener('click', e => { if (e.target.closest('.adoff[data-gopro]')) P.openBuy(); });
     $('#destTag').addEventListener('click', e => { if (e.target.closest('[data-act="favplace"]')) P.togglePlace(); });

@@ -395,10 +395,6 @@ body.in-detail .top,body.in-detail .cards,body.in-detail .mapctl{display:none}
 .prosheet .btn.big{height:54px;font-size:17px}
 .prosheet .bnote{margin-top:-6px}
 .prosheet .blink{margin-top:-6px}
-.rform{display:grid;gap:10px}
-.rform label{font-size:14px;color:var(--ink-2)}
-.rform input{height:48px;border:1px solid var(--line);border-radius:var(--r-btn);background:var(--surface-2);padding:0 14px;font-size:16px}
-.rmsg{margin:0;min-height:1.5em;font-size:14px;color:var(--ink-2)}
 .arow{display:grid;gap:2px;width:100%;padding:14px 16px;border:0;border-radius:14px;background:var(--surface-2);text-align:left}
 .arow b{font-size:16px;font-weight:700}
 .arow small{font-size:13px;color:var(--muted)}
