@@ -313,7 +313,7 @@ function cardHtml(r, i, n) {
   const ex = unk ? '現地で確認' : exclusions(z) || 'なし';
   return `
     <article class="card ${s.a}${z.id === state.sel ? ' sel' : ''}" data-id="${esc(z.id)}" tabindex="0" aria-label="${esc(`${zoneName(z)}、${s.text}、${i + 1}件目／${n}件`)}">
-      <div class="chead"><i class="cp" aria-hidden="true">P</i><span class="cname">${esc(zoneName(z))}</span>${fmtFee(z) ? `<span class="cfee" aria-label="料金 ${esc(fmtFee(z))}">${esc(fmtFee(z))}</span>` : ''}</div>
+      <div class="chead"><i class="cp" aria-hidden="true">P</i><span class="cname">${esc(zoneName(z))}</span>${fmtFee(z) ? `<span class="cfee" aria-label="料金 ${esc(fmtFee(z))}">${I.yen}${esc(fmtFee(z))}</span>` : ''}</div>
       <div class="cinfo">
         <div>${I.clock}<b>${esc(unk ? '現地で確認' : z.hours)}</b><span>利用時間</span></div>
         <div>${I.timer}<b>${esc(fmtLimit(z) || '—')}</b><span>最大時間</span></div>
@@ -507,9 +507,9 @@ function renderDetail(z) {
     </div>
     ${hours(z, t)}
     <p class="note">${I.info}<span>時間外は、ほとんどの区間で駐車禁止です。現地の標識・メーターの表示が優先されます。</span></p>
+    <div class="dacts"><h3>地図アプリで経路を見る</h3>${navRows(z, true)}</div>
     ${more ? `<div class="dmore"><h3>区間の情報</h3><dl>${more}</dl></div>` : ''}
     <p class="src"><span class="badge off">${esc(srcTag)}</span><span>${esc(srcText)}${srcUrl ? ` <a href="${srcUrl}" target="_blank" rel="noopener">${esc(srcLink)}</a>` : ''}</span></p>
-    <div class="dacts"><h3>地図アプリで経路を見る</h3>${navRows(z, true)}</div>
     ${Pro.adSlot('detail')}`;
   Pro.fillAds($('#dsheet'));
   if (!z.addr && !addrCache.has(z.id)) {
