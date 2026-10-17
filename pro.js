@@ -1,6 +1,6 @@
 /* Pro・お気に入り・広告・「このアプリについて」（docs/pro-ads.md）
    設定は config.js の window.PMM_CONFIG。販売前（proEnabled: false）は、お気に入り・鍵・購入シート・広告を一切出さず、
-   これまでどおりの画面（タイマーの通知も無料）のまま。app.js より先に読み込み、app.js の関数は呼ばれたときに使う。 */
+   これまでどおりの画面（タイマーも無料）のまま。販売中は、タイマーとお気に入りが有料プランの機能。app.js より先に読み込み、app.js の関数は呼ばれたときに使う。 */
 (function () {
   const CFG = Object.assign({
     proEnabled: false,     // 販売を始めたら true（Stripe・Cloudflare の準備ができてから）
@@ -74,7 +74,7 @@
         try {
           const r = await fetch(`${CFG.apiBase}/verify?sid=${encodeURIComponent(q.get('sid'))}`);
           const j = await r.json();
-          if (r.ok && j.license && await adopt(j.license)) P.toast('Pro になりました。ありがとうございます');
+          if (r.ok && j.license && await adopt(j.license)) P.toast('有料プランになりました。ありがとうございます');
           else if (j.error === 'limit') P.toast(`発行できる台数の上限に達しました。${SUPPORT} までお問い合わせください`, { ms: 6000 });
         } catch (e) { P.toast('購入の確認ができませんでした。「このアプリについて」の「購入の復元」からお試しください', { ms: 6000 }); }
         try { history.replaceState(history.state, '', location.pathname); } catch (e) {}
@@ -89,6 +89,7 @@
     document.body.classList.toggle('pro-on', P.on);
     const fb = document.getElementById('favBtn');
     if (fb) { fb.hidden = !P.shown; fb.classList.toggle('locked', P.gated()); }
+    if (typeof updateTimerBtn === 'function') updateTimerBtn();
     if (typeof renderCards === 'function' && zones.length) {
       if (state.detail) { const z = byId.get(state.sel); if (z) renderDetail(z); } else renderCards();
     }
@@ -143,7 +144,7 @@
   }
 
   P.toggleFav = function (id) {
-    if (P.gated()) return P.openBuy();
+    if (P.gated()) return P.openUpsell('fav');
     id = String(id);
     const list = favZones();
     const i = list.indexOf(id);
@@ -155,7 +156,7 @@
     if (!$('#favSheet').hidden) renderFav();
   };
   P.togglePlace = function () {
-    if (P.gated()) return P.openBuy();
+    if (P.gated()) return P.openUpsell('fav');
     const d = state.dest;
     if (!d) return;
     const list = favPlaces();
@@ -167,9 +168,9 @@
     syncStars();
   };
 
-  /* ---------- お気に入りの一覧（右上の★ボタン） ---------- */
+  /* ---------- お気に入りの一覧（右下の★ボタン。タイマーの上） ---------- */
   P.openFav = function () {
-    if (P.gated()) return P.openBuy();
+    if (P.gated()) return P.openUpsell('fav');
     showPanel('');
     renderFav();
     $('#favSheet').hidden = false;
@@ -245,19 +246,56 @@
 
   P.openBuy = function () {
     if (!P.shown) return;
-    if (P.on) return P.toast('Pro をご利用中です');
+    if (P.on) return P.toast('有料プランをご利用中です');
     openSheet(`
       <h2 id="buyTitle">パーキング・メーター・マップ Pro</h2>
       <p class="blead">1回のお支払いで、ずっと使えます</p>
       <ul class="bfeat">
+        <li>${I.check}タイマー（残り時間・終わる10分前の通知・車の場所）</li>
+        <li>${I.check}お気に入り（よく使う区間・行き先を保存）</li>
         <li>${I.check}広告が出なくなります</li>
-        <li>${I.check}タイマーが終わる10分前に通知します</li>
-        <li>${I.check}よく使う区間・行き先を保存できます</li>
       </ul>
-      <button class="btn go big" type="button" data-buy>${PRICE}で購入する</button>
+      <button class="btn go big" type="button" data-buy>有料プランを購入（${PRICE}）</button>
       <button class="blink" type="button" data-restore>購入済みの方はこちら（復元）</button>
       <button class="cancel" type="button" data-cancel>やめる</button>
       <p class="bnote">地図と時間の表示は、これまでどおり無料です。</p>
+      ${legalLinks()}`);
+    $('#buySheet [data-buy]').focus({ preventScroll: true });
+  };
+
+  // 無料のときにタイマー・お気に入りを押したら：その機能とよいところを説明して、購入へ
+  const UPSELL = {
+    timer: {
+      title: 'タイマー',
+      lead: '停めた時刻から、最大時間までの残りを数えます',
+      icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 13l3-3M9.5 2.5h5"/></svg>',
+      feats: [
+        ['残り時間がひと目で分かる', '地図の右下のボタンに「あと 25分」。残り10分を切ると赤に変わります。'],
+        ['終わる10分前に通知', '画面を閉じていても知らせるので、戻り遅れを防げます。'],
+        ['車の場所にすぐ戻れる', '停めた場所を覚えておき、ボタンひとつで地図を戻します。'],
+      ],
+    },
+    fav: {
+      title: 'お気に入り',
+      lead: 'よく使う区間と行き先を保存できます',
+      icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" fill="currentColor"/></svg>',
+      feats: [
+        ['いつもの区間をすぐ呼び出せる', 'カードの☆で保存。右下の★から一覧を開き、押すだけでその区間へ。'],
+        ['いまの状態も一覧で分かる', '保存した区間が、いま使えるか・何時までかを一覧に表示します。'],
+        ['行き先も保存', '職場・取引先など、よく行く場所を10件まで保存できます。'],
+      ],
+    },
+  };
+  P.openUpsell = function (kind) {
+    if (!P.shown || P.on) return;
+    const u = UPSELL[kind];
+    openSheet(`
+      <div class="uhead"><i class="uicon" aria-hidden="true">${u.icon}</i><div><h2 id="buyTitle">${u.title}は有料プランの機能です</h2><p class="blead">${u.lead}</p></div></div>
+      <ul class="ufeat">${u.feats.map(([b, t]) => `<li>${I.check}<div><b>${b}</b><span>${t}</span></div></li>`).join('')}</ul>
+      <p class="uplan">有料プランでは、タイマーとお気に入りの両方が使え、広告も出なくなります。<b>${PRICE}・買い切り</b>（月額ではありません）。</p>
+      <button class="btn go big" type="button" data-buy>有料プランを購入</button>
+      <button class="blink" type="button" data-restore>購入済みの方はこちら（復元）</button>
+      <button class="cancel" type="button" data-cancel>やめる</button>
       ${legalLinks()}`);
     $('#buySheet [data-buy]').focus({ preventScroll: true });
   };
@@ -292,7 +330,7 @@
     try {
       const r = await fetch(`${CFG.apiBase}/restore`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email }) });
       const j = await r.json().catch(() => ({}));
-      if (r.ok && j.license && await adopt(j.license)) { P.closeSheet(); P.toast('Pro を復元しました'); return; }
+      if (r.ok && j.license && await adopt(j.license)) { P.closeSheet(); P.toast('有料プランを復元しました'); return; }
       msg.textContent = j.error === 'limit' ? `発行できる台数の上限に達しました。${SUPPORT} までお問い合わせください`
         : j.error === 'rate' ? 'しばらく待ってから、もう一度お試しください'
         : 'このメールアドレスでの購入が見つかりませんでした';
@@ -325,7 +363,7 @@
     ['時間外の区間はどうなりますか？', '時間外は、ほとんどの区間で駐車禁止です。必ず現地の標識・メーターの表示を確かめてください。'],
     ['アプリの表示と現地の標識が違うときは？', '現地の標識・メーター・チケットの表示が優先です。工事や行事で使えない日もあります。'],
     ['最大時間を過ぎたらどうなりますか？', '制限時間を過ぎての駐車はできません。タイマーは残り10分で赤くなり、時間を過ぎると超えた時間をマイナスで表示します。'],
-    ['タイマーの使い方は？', '右下（現在地ボタンの上）の時計のボタンを押し、「スタート」を押します。動いているあいだは、そのボタンに残り時間が出ます（10分を切ると赤）。「車の場所を確認」で、停めた場所に地図を戻せます。'],
+    ['タイマーの使い方は？', '右下（現在地ボタンの上）のストップウォッチのボタンを押し、「スタート」を押します。動いているあいだは、そのボタンに残り時間が出ます（10分を切ると赤）。「車の場所を確認」で、停めた場所に地図を戻せます。'],
     ['終わる前に通知を受け取るには？', 'タイマーの「終わる10分前に知らせる」をオンにし、通知を許可してください。ホーム画面に追加すると、画面を閉じていても届きます。'],
     ['パーキング・メーターとパーキング・チケットの違いは？', 'メーターは区間ごとの機械に、チケットは近くの発給機で買った券を車内に表示します。どちらも料金と時間は現地の表示に従ってください。'],
     ['グレーの破線の区間（神奈川など）は？', '県警の公開情報に利用時間・曜日が載っていない区間です。時間は現地の標識で確かめてください。'],
@@ -337,15 +375,15 @@
   // 右上の「？」のメニュー：よくある質問・このアプリについて（データと地図の出典・お問い合わせ）
   P.openAbout = function () {
     const proRow = !P.shown ? ''
-      : P.on ? `<div class="arow"><b>Pro をご利用中です</b>${P.iat ? `<small>購入日 ${new Date(P.iat * 1000).toLocaleDateString('ja-JP')}</small>` : ''}</div>`
-      : `<button class="arow btnrow" type="button" data-gopro><b>Pro にする（${PRICE}）</b><small>広告なし・タイマーの通知・お気に入り</small></button>`;
+      : P.on ? `<div class="arow"><b>有料プランをご利用中です</b>${P.iat ? `<small>購入日 ${new Date(P.iat * 1000).toLocaleDateString('ja-JP')}</small>` : ''}</div>`
+      : `<button class="arow btnrow" type="button" data-gopro><b>有料プランを購入（${PRICE}）</b><small>タイマー・お気に入り・広告なし</small></button>`;
     const credit = typeof mapCredit === 'function' ? mapCredit() : '';
     openSheet(`
       <h2 id="buyTitle">ヘルプ</h2>
       ${proRow}
       ${P.shown ? '<button class="arow btnrow" type="button" data-restore><b>購入の復元</b></button>' : ''}
       <h3>よくある質問</h3>
-      <div class="faq">${P.FAQ.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div>
+      <div class="faq">${(P.shown ? [['有料プランでは何ができますか？', `タイマーとお気に入りが使えるようになり、広告も出なくなります。${PRICE}の買い切りです。地図と時間の表示は、これまでどおり無料です。`], ...P.FAQ] : P.FAQ).map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div>
       <h3>このアプリについて</h3>
       <ul class="asrc">${P.SOURCES.map(([k, t, l, u]) => `<li><b>${k}</b>${esc(t)}${u ? ` <a href="${u}" target="_blank" rel="noopener">${l}</a>` : ''}</li>`).join('')}
         <li><b>地図</b>${credit}。区間の線は OpenStreetMap から作成。表示に <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>・<a href="https://maplibre.org" target="_blank" rel="noopener">MapLibre</a> を使っています。</li>
@@ -362,7 +400,7 @@
     if (!CFG.adsEnabled || P.on || !CFG.adsenseClient) return '';
     return `<div class="adbox"><span class="adlabel">広告</span>
       <ins class="adsbygoogle" style="display:block;width:100%;height:100px" data-ad-client="${esc(CFG.adsenseClient)}" data-ad-slot="${esc(CFG.adsenseSlots[kind] || '')}"></ins></div>
-      ${P.shown ? '<button class="adoff" type="button" data-gopro>広告を消す（Pro）</button>' : ''}`;
+      ${P.shown ? '<button class="adoff" type="button" data-gopro>広告を消す（有料プラン）</button>' : ''}`;
   };
   // 詳細かタイマーを初めて開いたときに広告のスクリプトを読み込む（Pro のときは読み込まない）
   P.fillAds = function (root) {

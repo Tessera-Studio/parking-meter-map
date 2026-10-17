@@ -630,9 +630,11 @@ function updateTimerBtn() {
   const left = timerLeft();
   b.classList.toggle('run', left != null && left > 10 * 60000);
   b.classList.toggle('warn', left != null && left <= 10 * 60000);
+  // 有料プランの販売中で未購入のときは鍵を付ける（押すと説明と購入のシート）
+  b.classList.toggle('locked', Pro.gated());
   if (left == null) {
-    if (!b.querySelector('svg')) b.innerHTML = I.clock;
-    b.setAttribute('aria-label', 'タイマー');
+    b.innerHTML = I.timer + (Pro.gated() ? `<i class="lock" aria-hidden="true">${svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>')}</i>` : '');
+    b.setAttribute('aria-label', Pro.gated() ? 'タイマー（有料プラン）' : 'タイマー');
     return;
   }
   if (!b.querySelector('b')) b.innerHTML = '<small></small><b></b>';
@@ -679,7 +681,7 @@ function renderTimer() {
         <div><span>最大 · 料金</span><b>${z ? esc(`${fmtLimit(z) || '—'} · ${fmtFee(z) || '—'}`) : '—'}</b></div>
       </div>
       <div class="tnotify">
-        <label class="switch${locked ? ' locked' : ''}"><span>終わる10分前に知らせる${locked ? `<i class="lock" aria-label="Pro の機能">${svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>')}</i>` : ''}</span><input type="checkbox" id="tnotify" role="switch"${notify ? ' checked' : ''}${locked ? ' data-locked' : ''}></label>
+        <label class="switch${locked ? ' locked' : ''}"><span>終わる10分前に知らせる${locked ? `<i class="lock" aria-label="有料プランの機能">${svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>')}</i>` : ''}</span><input type="checkbox" id="tnotify" role="switch"${notify ? ' checked' : ''}${locked ? ' data-locked' : ''}></label>
         <small>ホーム画面に追加すると、画面を閉じていても届きます</small>
       </div>
       <button class="btn sub big" type="button" id="tcar"${running ? '' : ' disabled'}>${I.pin}車の場所を確認</button>
@@ -967,7 +969,8 @@ function bind() {
   $('#goScrim').addEventListener('click', e => { if (e.target === $('#goScrim')) closeGo(); });
 
   $('#helpBtn').addEventListener('click', () => Pro.openAbout());
-  $('#timerBtn').addEventListener('click', () => openTimer());
+  // タイマーは有料プランの機能。未購入なら説明と購入のシート（動いているタイマーは開ける）
+  $('#timerBtn').addEventListener('click', () => (Pro.gated() && !timer ? Pro.openUpsell('timer') : openTimer()));
   Pro.bind();
   $('#timer').addEventListener('click', e => {
     const b = e.target.closest('button');
