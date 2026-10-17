@@ -469,13 +469,6 @@ function hours(z, t) {
     `<div class="${on && v ? 'on' : ''}"><span>${k}</span>${v ? `<b>${esc(v)}</b>` : '<span class="x">利用不可</span>'}</div>`).join('')}${ex.length ? `<p class="hex">${esc(ex.join('、'))}</p>` : ''}</div>`;
 }
 
-function stateBlock(z, t) {
-  const s = status(z, t);
-  if (s.a === 'unk') return `<p class="state"><b>時間は現地で確認</b><span>県警の公開情報に時間・曜日がありません</span></p>`;
-  if (s.a === 'ok') return `<p class="state ok"><b>${esc(s.text)}</b>${fmtLimit(z) ? `<span>1回 最大${esc(fmtLimit(z))}</span>` : ''}</p>`;
-  return `<p class="state no"><b>${esc(s.text)}</b></p>`;
-}
-
 // 出典ラベル（docs/pro-ads.md §22）：[公開データ][おおよその位置][時間は現地で確認] の3種類
 function sourceLabel(z) {
   if (z.days === 'unknown' || !z.span) return ['時間は現地で確認', z.pref === '神奈川県' ? '神奈川県警察の情報をもとに作成' : '各警察の情報をもとに作成'];
@@ -507,7 +500,6 @@ function renderDetail(z) {
       <p class="dkick">${esc(kicker(z))}</p>
       <div class="dtitle"><h2 id="dtitle">${esc(zoneName(z))}</h2>${Pro.starBtn(z.id, 'dstar')}<span>${esc(distText(d))}</span></div>
     </div>
-    ${stateBlock(z, t)}
     <div class="dfacts">
       <div>${I.clock}<b>${esc(z.span ? z.hours : '現地で確認')}</b><span>利用時間</span></div>
       <div>${I.timer}<b>${esc(fmtLimit(z) || '—')}</b><span>最大</span></div>
@@ -668,8 +660,8 @@ function renderTimer() {
   const notify = !locked && load('pmm-notify', false);
   $('#timer').innerHTML = `
     <div class="tin">
-      <button class="round tclose" id="tclose" type="button" aria-label="閉じる">${I.down}</button>
       <div class="thead">
+        <button class="round tclose" id="tclose" type="button" aria-label="閉じる">${I.down}</button>
         <span class="badge ${running ? 'ok' : 'off'}" id="tbadge">${running ? '駐車中' : 'タイマー'}</span>
         <h2>${esc(z ? zoneName(z) : '区間を選んでください')}</h2>
         ${z ? `<p>${esc(kicker(z))}</p>` : ''}
