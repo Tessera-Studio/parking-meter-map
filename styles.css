@@ -68,8 +68,6 @@ svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-lin
 .search.dest input{font-weight:700}
 .ctl{flex:none;position:relative;width:52px;height:52px;border:0;border-radius:var(--r-ctl);background:var(--surface);box-shadow:var(--shadow-ctl);display:grid;place-items:center;padding:0}
 .ctl svg{width:24px;height:24px}
-.timerbtn .dot{display:none;position:absolute;top:10px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 2px var(--surface)}
-.timerbtn.on .dot{display:block}
 
 .chip{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border:0;border-radius:50px;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-ctl);font-size:15px;font-weight:700;white-space:nowrap}
 .chip svg{width:16px;height:16px}
@@ -93,7 +91,6 @@ svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-lin
 .mapctl{position:absolute;z-index:900;right:16px;bottom:calc(16px + var(--cards-h) + 14px + env(safe-area-inset-bottom));display:grid;gap:10px}
 .round{width:48px;height:48px;border:0;border-radius:50%;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-ctl);display:grid;place-items:center;padding:0}
 .round svg{width:22px;height:22px}
-#baseBtn[aria-pressed="true"]{background:var(--ink);color:var(--on-ink)}
 
 /* ---------- カードの列 ---------- */
 .cards{position:absolute;z-index:950;left:0;right:0;bottom:calc(16px + env(safe-area-inset-bottom));pointer-events:none}
@@ -117,8 +114,15 @@ svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-lin
 .csub span:first-child{overflow:hidden;text-overflow:ellipsis}
 .cnum{flex:none}
 .card.no .cname,.card.unk .cname{color:var(--ink-2)}
-.cbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
-.cbtns .btn{height:44px;padding:0 10px}
+.cbtns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 52px;gap:8px;margin-top:2px}
+.cbtns .btn{height:52px;padding:0 10px}
+/* カードのタイマーボタン（52px角）。動いているあいだは残り時間、残り10分を切ったら赤、過ぎたらマイナスで赤 */
+.cbtns .ctimer{width:52px;padding:0;background:var(--chip-2);display:grid;place-content:center;justify-items:center;gap:0;line-height:1.1}
+.ctimer > svg{width:24px;height:24px}
+.ctimer small{font-size:10px;font-weight:700;opacity:.9}
+.ctimer b{font-size:14px;font-weight:700;letter-spacing:-.02em;white-space:nowrap}
+.ctimer.run{background:var(--ok);color:var(--on-ok)}
+.ctimer.warn{background:var(--no);color:var(--on-no)}
 .btn.inkbtn{background:var(--ink);color:var(--surface)}
 .badge{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border-radius:var(--r-badge);font-size:13px;font-weight:700;white-space:nowrap}
 .badge svg{width:15px;height:15px;stroke-width:2.4}
@@ -211,24 +215,27 @@ svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-lin
 .gosheet .cancel{justify-self:center;border:0;background:transparent;font-size:15px;font-weight:700;color:var(--muted);padding:8px 16px}
 
 /* ---------- タイマー ---------- */
-.timer{position:absolute;inset:0;z-index:1300;background:var(--surface);overflow-y:auto;overscroll-behavior:contain}
-.tin{max-width:460px;margin:0 auto;padding:calc(12px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom));display:grid;gap:16px}
-.tclose{justify-self:start;box-shadow:none;background:var(--chip-2)}
+/* タイマー：検索欄の下半分から、カードの上半分までにかかるカード */
+.timer{position:absolute;z-index:1300;left:16px;right:16px;top:calc(12px + 26px + env(safe-area-inset-top));bottom:calc(16px + var(--cards-h) / 2 + env(safe-area-inset-bottom));background:var(--surface);border-radius:var(--r-card);box-shadow:0 8px 32px rgba(0,0,0,.24);overflow-y:auto;overscroll-behavior:contain;--ring:clamp(150px,25vh,220px)}
+.tin{max-width:460px;margin:0 auto;padding:14px 18px 18px;display:grid;gap:12px}
+.tclose{justify-self:start;width:40px;height:40px;box-shadow:none;background:var(--chip-2)}
 .thead{display:grid;gap:4px;justify-items:start}
-.thead h2{margin:4px 0 0;font-size:26px;font-weight:700;line-height:1.2}
+.thead h2{margin:2px 0 0;font-size:24px;font-weight:700;line-height:1.2}
 .thead p{margin:0;font-size:13px;color:var(--muted)}
-.ring{position:relative;justify-self:center;width:260px;height:260px}
-.ring svg{width:260px;height:260px;transform:rotate(-90deg)}
+.ring{position:relative;justify-self:center;width:var(--ring);height:var(--ring)}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
 .ring .bg{stroke:var(--line);stroke-width:16}
 .ring .fg{stroke:var(--ok);stroke-width:16;stroke-linecap:round;transition:stroke-dashoffset .6s linear}
 .ring.over .fg,.ring.soon .fg{stroke:var(--no)}
 .ring.soon .rtext b{color:var(--no)}
 .rtext{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;text-align:center}
 .rtext small{font-size:15px;color:var(--muted)}
-.rtext b{font-size:64px;font-weight:700;line-height:1.05;letter-spacing:-.02em}
-.rtext b.long{font-size:44px}
+.rtext b{font-size:calc(var(--ring) * .25);font-weight:700;line-height:1.05;letter-spacing:-.02em}
+.rtext b.long{font-size:calc(var(--ring) * .17)}
 .rtext span{font-size:15px;color:var(--ink-2)}
-.ring.over .rtext b{color:var(--no);font-size:44px}
+.ring.over .rtext b{color:var(--no);font-size:calc(var(--ring) * .15)}
+/* 時間を過ぎた分（マイナス） */
+.rtext em{font-style:normal;font-size:calc(var(--ring) * .2);font-weight:700;line-height:1.1;color:var(--no);letter-spacing:-.02em}
 .tfacts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .tfacts div{background:var(--surface-2);border-radius:12px;padding:10px 12px;display:grid;gap:2px}
 .tfacts span{font-size:12px;color:var(--muted)}
@@ -241,7 +248,7 @@ svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-lin
 .switch input:checked::after{left:23px}
 .tnotify small{font-size:12px;color:var(--muted)}
 .tbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.tbtns .btn{height:54px;font-size:17px}
+.tbtns .btn{height:50px;font-size:16px}
 .tbtns .btn:disabled{opacity:.35}
 .tfoot{margin:0;text-align:center;font-size:12px;color:var(--muted)}
 
@@ -287,7 +294,8 @@ body.in-detail .top,body.in-detail .cards,body.in-detail .mapctl{display:none}
 .favbtn:not(.locked) .lock{display:none}
 body.in-detail .favbtn{display:none}
 /* ☆（カード・詳細・行き先） */
-.cbtns.has-star{grid-template-columns:1fr 44px 1fr}
+.cbtns.has-star{grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr) 52px}
+.cbtns.has-star .inkbtn > svg{display:none}
 .btn.star{position:relative;width:44px;padding:0;background:var(--chip-2)}
 .btn.star > svg{width:20px;height:20px}
 .btn.star.on > svg,.pstar.on > svg,.funfav > svg{fill:var(--ok);stroke:var(--ok)}
@@ -347,8 +355,6 @@ body.in-detail .favbtn{display:none}
 .asrc b{display:inline-block;min-width:3.5em;margin-right:6px;color:var(--ink)}
 .anote,.acontact{margin:0;font-size:13px;color:var(--ink-2)}
 .acontact a{color:var(--ink)}
-/* 「このアプリについて」の i（出典の左） */
-.aboutbtn{width:28px;height:28px;margin:-4px 2px -4px -2px;border:0;border-radius:50%;background:#fff;color:#1C1D1F;box-shadow:var(--shadow-ctl);font:700 15px/1 Georgia,serif;font-style:italic;vertical-align:middle;padding:0}
 /* 広告の枠（詳細・タイマーの一番下だけ。高さを固定して画面をずらさない） */
 .adbox{position:relative;height:118px;padding:18px 0 0;background:var(--surface-2);border-radius:var(--r-btn);overflow:hidden}
 .adlabel{position:absolute;top:3px;left:10px;font-size:11px;color:var(--muted)}
@@ -356,5 +362,16 @@ body.in-detail .favbtn{display:none}
 .tin .adoff{justify-self:end}
 /* 広い画面：検索欄の列は最大600pxなので、★ボタンもタイマーボタンの真下にそろえる */
 @media (min-width:761px){ .favbtn{right:auto;left:calc(var(--col-w) + 16px + min(600px, 100vw - var(--col-w) - 32px) - 52px)} }
-/* 広い画面：出典が左の列（カード）の下に回り込んで i ボタンが隠れないよう、地図の幅に収める */
-@media (min-width:761px){ .leaflet-control-attribution{max-width:calc(100vw - var(--col-w) - 80px)} }
+
+/* 「？」ボタン（右上） */
+.helpbtn{font:700 24px/1 var(--f-body);color:var(--ink)}
+/* よくある質問 */
+.faq{display:grid;border-top:1px solid var(--line)}
+.faq details{border-bottom:1px solid var(--line)}
+.faq summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:12px;padding:12px 2px;font-size:15px;font-weight:700}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";flex:none;color:var(--muted);font-weight:500}
+.faq details[open] summary::after{content:"−"}
+.faq p{margin:0 2px 12px;font-size:14px;line-height:1.7;color:var(--ink-2)}
+/* 広い画面：タイマーのカードは地図の側（左の列の右）に */
+@media (min-width:761px){ .timer{left:calc(var(--col-w) + 16px);right:auto;width:min(460px, 100vw - var(--col-w) - 32px);bottom:24px} }

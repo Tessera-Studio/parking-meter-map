@@ -16,8 +16,6 @@ const GSI_PALE = {
   url: 'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
   attr: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>',
 };
-// 区間データの出典。警察の情報をもとに加工して作ったことを書く（docs/pro-ads.md §22）
-const SRC_ATTR = '区間データ：<a href="https://portal.data.metro.tokyo.lg.jp/" target="_blank" rel="noopener">警視庁のオープンデータ</a>（<a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener">CC BY 4.0</a>）・京都府警察・大阪府警察・神奈川県警察・北海道警察の情報をもとに Tessera Studio が作成（線は OpenStreetMap から作成）';
 const PREFS = ['北海道', '東京都', '神奈川県', '京都府', '大阪府'];
 
 // 国土地理院の地名検索・住所の逆引き（鍵不要）
@@ -129,27 +127,21 @@ const badge = s => (s.a === 'ok'
 /* ---------- 地図 ---------- */
 const narrow = () => window.innerWidth <= 760;
 
-let baseKind = 'simple';
-try { baseKind = localStorage.getItem('pmm-base') === 'detail' ? 'detail' : 'simple'; } catch (e) {}
-
 let useVector = true;
 function setTiles() {
   if (tiles) map.removeLayer(tiles);
-  map.attributionControl.removeAttribution(Basemap.ATTR);
-  // 地図はいつも明るい配色（端末がダークテーマでも暗くしない。道・町名を読みやすくするため）
+  // 地図は1種類・いつも明るい配色（端末がダークテーマでも暗くしない。道・町名を読みやすくするため）
   if (useVector && Basemap.supported()) {
-    tiles = L.maplibreGL({ style: Basemap.style(baseKind === 'detail'), interactive: false, attributionControl: false });
+    tiles = L.maplibreGL({ style: Basemap.style(false), interactive: false, attributionControl: false });
     tiles.addTo(map);
-    map.attributionControl.addAttribution(Basemap.ATTR);
     watchVector(tiles);
   } else {
-    tiles = L.tileLayer(GSI_PALE.url, { attribution: GSI_PALE.attr, maxNativeZoom: 18, maxZoom: 21, detectRetina: true }).addTo(map);
+    tiles = L.tileLayer(GSI_PALE.url, { maxNativeZoom: 18, maxZoom: 21, detectRetina: true }).addTo(map);
   }
   $('#map').style.background = '#F2F1EE';
-  const b = $('#baseBtn');
-  b.setAttribute('aria-pressed', baseKind === 'detail');
-  b.setAttribute('aria-label', `地図の表示を切り替え（いまは${baseKind === 'detail' ? '詳しい地図' : 'シンプル'}）`);
 }
+// いまの下地の出典（「？」のメニューに出す。地図の上には出さない）
+const mapCredit = () => (tiles instanceof L.TileLayer ? GSI_PALE.attr : Basemap.ATTR);
 // ベクトル地図が1枚も読めないうちに失敗したら（または8秒たっても読めなければ）、画像の地図に切り替える
 function watchVector(t) {
   const gl = t.getMaplibreMap();
@@ -159,11 +151,6 @@ function watchVector(t) {
   gl.on('sourcedata', e => { if (e.tile) ok = true; });
   gl.on('error', fail);
   setTimeout(fail, 8000);
-}
-function toggleBase() {
-  baseKind = baseKind === 'detail' ? 'simple' : 'detail';
-  try { localStorage.setItem('pmm-base', baseKind); } catch (e) {}
-  setTiles();
 }
 
 // 地図のうち、上の部品・カード・詳細に隠れていない範囲（画面の座標）
@@ -202,13 +189,9 @@ function initMap() {
   const fresh = here && Date.now() - here.t < 30 * 60000;
   startHere = fresh ? here.c : null;
   const start = fresh ? { c: here.c, z: 16 } : load('pmm-last', null) || { c: GINZA, z: 16 };
-  map = L.map('map', { center: start.c, zoom: start.z, zoomControl: false, minZoom: 6, maxZoom: 21, preferCanvas: true });
+  // 出典は地図の上に出さず、右上の「？」のメニューにまとめる（カードと重ならないように）
+  map = L.map('map', { center: start.c, zoom: start.z, zoomControl: false, attributionControl: false, minZoom: 6, maxZoom: 21, preferCanvas: true });
   L.control.zoom({ position: 'bottomright' }).addTo(map);
-  map.attributionControl.setPosition('bottomright');
-  // 出典の左に「このアプリについて」の i ボタン
-  map.attributionControl.setPrefix('<button class="aboutbtn" type="button" aria-label="このアプリについて">i</button> <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
-  map.attributionControl.getContainer().addEventListener('click', e => { if (e.target.closest('.aboutbtn')) Pro.openAbout(); });
-  map.attributionControl.addAttribution(SRC_ATTR);
   setTiles();
   layer = L.layerGroup().addTo(map);
   marks = L.layerGroup().addTo(map); // 行き先の印と円
@@ -334,6 +317,7 @@ function cardHtml(r, i, n) {
         <button class="btn inkbtn" type="button" data-act="go">${I.go}ここへ行く</button>
         ${Pro.starBtn(z.id)}
         <button class="btn sub" type="button" data-act="detail">詳細</button>
+        ${timerBtnHtml(z)}
       </div>
     </article>`;
 }
@@ -440,6 +424,7 @@ function onCardClick(e) {
     // ☆はお気に入りだけを切り替える（カードの選択・めくりは起こさない）
     if (act === 'fav') Pro.toggleFav(b.dataset.id);
     else if (act === 'go') startGo(z);
+    else if (act === 'timer') openTimer(z);
     else if (act === 'detail') openDetail(z);
     else if (act === 'nearest' && z) { state.moved = true; centerOn(z.center, 16); }
     return;
@@ -629,9 +614,44 @@ const timerZoneOf = () => {
   return zones.reduce((b, z) => (!b || meters(o, z.center) < meters(o, b.center) ? z : b), null);
 };
 
-function openTimer() {
+// タイマーの残り（ミリ秒）。動いていなければ null。時間を過ぎるとマイナス
+const timerLeft = () => (timer ? timer.startedAt + timer.limitMin * 60000 - Date.now() : null);
+// 残り時間の短い表記（カードのタイマーボタン用）：「42分」「−5分」「−30秒」
+function shortLeft(ms) {
+  if (ms > 0) return `${Math.ceil(ms / 60000)}分`;
+  const s = Math.floor(-ms / 1000);
+  return s < 60 ? `−${s}秒` : `−${Math.floor(s / 60)}分`;
+}
+// 時間を過ぎた分の表記（タイマーの円の中）：「−30秒」「−12分」「−1時間5分」
+function overText(ms) {
+  const s = Math.floor(-ms / 1000);
+  return s < 60 ? `−${s}秒` : `−${fmtMin(Math.floor(s / 60))}`;
+}
+// カードのタイマーボタン。動いているあいだは残り時間（残り10分を切ったら赤、過ぎたらマイナスで赤）
+function timerBtnHtml(z) {
+  const left = timerLeft();
+  if (left == null) return `<button class="btn ctimer" type="button" data-act="timer" aria-label="タイマー">${I.clock}</button>`;
+  const cls = left <= 10 * 60000 ? 'warn' : 'run';
+  return `<button class="btn ctimer ${cls}" type="button" data-act="timer" aria-label="タイマー（${left > 0 ? `あと${shortLeft(left)}` : `${shortLeft(left).slice(1)}超過`}）"><small>${left > 0 ? 'あと' : '超過'}</small><b>${esc(shortLeft(left))}</b></button>`;
+}
+// カードのタイマーボタンだけを書き換える（1秒ごと）
+function updateCardTimers() {
+  const left = timerLeft();
+  document.querySelectorAll('#track .ctimer').forEach(b => {
+    const cls = left == null ? '' : left <= 10 * 60000 ? 'warn' : 'run';
+    if (left == null) { if (b.classList.contains('run') || b.classList.contains('warn')) b.outerHTML = timerBtnHtml(); return; }
+    b.className = `btn ctimer ${cls}`;
+    const txt = shortLeft(left);
+    if (!b.querySelector('b')) b.innerHTML = '<small></small><b></b>';
+    b.querySelector('small').textContent = left > 0 ? 'あと' : '超過';
+    b.querySelector('b').textContent = txt;
+  });
+}
+
+// z：カードのタイマーボタンから開いたときは、その区間（動いているときは動いている区間）
+function openTimer(z) {
   showPanel('');
-  timerZone = timerZoneOf();
+  timerZone = timer ? byId.get(timer.zoneId) : z && z.id ? z : timerZoneOf();
   renderTimer();
   $('#timer').hidden = false;
   $('#tclose').focus();
@@ -655,6 +675,10 @@ function renderTimer() {
         <svg viewBox="0 0 260 260" aria-hidden="true"><circle class="bg" cx="130" cy="130" r="122"/><circle class="fg" id="ringFg" cx="130" cy="130" r="122"/></svg>
         <div class="rtext" id="rtext" aria-live="polite"></div>
       </div>
+      <div class="tbtns">
+        <button class="btn go" type="button" id="tstart"${running || !z ? ' disabled' : ''}>${I.play}スタート</button>
+        <button class="btn dark" type="button" id="tstop"${running ? '' : ' disabled'}>${I.stop}ストップ</button>
+      </div>
       <div class="tfacts">
         <div><span>停めた時刻</span><b>${running ? esc(hmOf(new Date(timer.startedAt))) : '—'}</b></div>
         <div><span>最大 · 料金</span><b>${z ? esc(`${fmtLimit(z) || '—'} · ${fmtFee(z) || '—'}`) : '—'}</b></div>
@@ -662,10 +686,6 @@ function renderTimer() {
       <div class="tnotify">
         <label class="switch${locked ? ' locked' : ''}"><span>終わる10分前に知らせる${locked ? `<i class="lock" aria-label="Pro の機能">${svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>')}</i>` : ''}</span><input type="checkbox" id="tnotify" role="switch"${notify ? ' checked' : ''}${locked ? ' data-locked' : ''}></label>
         <small>ホーム画面に追加すると、画面を閉じていても届きます</small>
-      </div>
-      <div class="tbtns">
-        <button class="btn go" type="button" id="tstart"${running || !z ? ' disabled' : ''}>${I.play}スタート</button>
-        <button class="btn dark" type="button" id="tstop"${running ? '' : ' disabled'}>${I.stop}ストップ</button>
       </div>
       <button class="btn sub big" type="button" id="tcar"${running ? '' : ' disabled'}>${I.pin}車の場所を確認</button>
       <p class="tfoot">メーター・チケットに表示された時刻が優先です</p>
@@ -689,7 +709,9 @@ function updateTimer() {
     html = `<small>最大</small><b>${esc(z ? fmtMin(z.limitMin || 60) : '—')}</b>`;
   } else if (over) {
     frac = 0;
-    html = '<b>時間です</b>';
+    const end = timer.startedAt + timer.limitMin * 60000;
+    // 時間を過ぎた分をマイナスで出す
+    html = `<b>時間です</b><em>${esc(overText(end - Date.now()))}</em><span>${esc(hmOf(new Date(end)))} に終了</span>`;
   } else {
     const end = timer.startedAt + timer.limitMin * 60000;
     const left = end - Date.now();
@@ -736,7 +758,7 @@ function checkCar() {
 }
 // タイマーが動いているあいだは、ボタンに印を付け、車の場所に印を出す
 function showTimerState() {
-  $('#timerBtn').classList.toggle('on', !!timer);
+  updateCardTimers();
   if (carMark) { map.removeLayer(carMark); carMark = null; }
   if (timer) {
     carMark = L.marker(timer.carLatLng, {
@@ -751,6 +773,7 @@ function askNotify() {
 // 終わる10分前に1回だけ知らせる（許可がないときは画面の表示だけ）
 function tickTimer() {
   if (!$('#timer').hidden) updateTimer();
+  updateCardTimers();
   if (!timer || timer.notified || Pro.gated() || !load('pmm-notify', false)) return;
   const left = timer.startedAt + timer.limitMin * 60000 - Date.now();
   if (left > 10 * 60000 || left <= 0) return;
@@ -949,7 +972,7 @@ function bind() {
   window.addEventListener('popstate', () => { if (state.detail) closeDetail(); });
   $('#goScrim').addEventListener('click', e => { if (e.target === $('#goScrim')) closeGo(); });
 
-  $('#timerBtn').addEventListener('click', openTimer);
+  $('#helpBtn').addEventListener('click', () => Pro.openAbout());
   Pro.bind();
   $('#timer').addEventListener('click', e => {
     const b = e.target.closest('button');
@@ -966,7 +989,6 @@ function bind() {
     if (e.target.checked) askNotify();
   });
 
-  $('#baseBtn').addEventListener('click', toggleBase);
   $('#locate').addEventListener('click', () => {
     if (!navigator.geolocation) return alert('この端末では現在地を使えません');
     if (state.dest) clearDest(false);

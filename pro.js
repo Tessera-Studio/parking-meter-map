@@ -318,17 +318,38 @@
     ['神奈川', '神奈川県警察の情報をもとに作成。', '', ''],
     ['札幌', '北海道警察の情報をもとに作成。', '', ''],
   ];
+  // よくある質問（「？」のメニュー）。文言のルール（design-v2.md §2）に従う
+  P.FAQ = [
+    ['線の色は何を表していますか？', '緑はいま使える区間、赤は時間外の区間、グレーの破線は時間が公開されていない区間です。黄色は選んでいる区間です。'],
+    ['「21:00まで」「あす 9:00から」は何の時刻ですか？', '緑の区間は使える時間の終わり、赤の区間は次に使えるようになる時刻です。曜日・祝日・年末年始・冬期の休止も見ています。'],
+    ['時間外の区間はどうなりますか？', '時間外は、ほとんどの区間で駐車禁止です。必ず現地の標識・メーターの表示を確かめてください。'],
+    ['アプリの表示と現地の標識が違うときは？', '現地の標識・メーター・チケットの表示が優先です。工事や行事で使えない日もあります。'],
+    ['最大時間を過ぎたらどうなりますか？', '制限時間を過ぎての駐車はできません。タイマーは残り10分で赤くなり、時間を過ぎると超えた時間をマイナスで表示します。'],
+    ['タイマーの使い方は？', 'カードの時計のボタンを押し、「スタート」を押します。動いているあいだは、カードの時計のボタンに残り時間が出ます。「車の場所を確認」で、停めた場所に地図を戻せます。'],
+    ['終わる前に通知を受け取るには？', 'タイマーの「終わる10分前に知らせる」をオンにし、通知を許可してください。ホーム画面に追加すると、画面を閉じていても届きます。'],
+    ['パーキング・メーターとパーキング・チケットの違いは？', 'メーターは区間ごとの機械に、チケットは近くの発給機で買った券を車内に表示します。どちらも料金と時間は現地の表示に従ってください。'],
+    ['グレーの破線の区間（神奈川など）は？', '県警の公開情報に利用時間・曜日が載っていない区間です。時間は現地の標識で確かめてください。'],
+    ['どの地域に対応していますか？', '東京・大阪・神奈川・札幌・京都です。地図を動かすか、上の検索欄に地名・駅名を入れてください。'],
+    ['現在地が出ないときは？', '端末の設定で、ブラウザ（またはホーム画面のアイコン）に位置情報の利用を許可してください。iPhone は「設定」→「Safari」→「位置情報」です。'],
+    ['ホーム画面に追加するには？', 'iPhone は Safari の共有ボタンから「ホーム画面に追加」、Android は Chrome のメニューから「ホーム画面に追加」を選んでください。'],
+  ];
+
+  // 右上の「？」のメニュー：よくある質問・このアプリについて（データと地図の出典・お問い合わせ）
   P.openAbout = function () {
     const proRow = !P.shown ? ''
       : P.on ? `<div class="arow"><b>Pro をご利用中です</b>${P.iat ? `<small>購入日 ${new Date(P.iat * 1000).toLocaleDateString('ja-JP')}</small>` : ''}</div>`
       : `<button class="arow btnrow" type="button" data-gopro><b>Pro にする（${PRICE}）</b><small>広告なし・タイマーの通知・お気に入り</small></button>`;
+    const credit = typeof mapCredit === 'function' ? mapCredit() : '';
     openSheet(`
-      <h2 id="buyTitle">このアプリについて</h2>
+      <h2 id="buyTitle">ヘルプ</h2>
       ${proRow}
       ${P.shown ? '<button class="arow btnrow" type="button" data-restore><b>購入の復元</b></button>' : ''}
-      <h3>データの出典</h3>
+      <h3>よくある質問</h3>
+      <div class="faq">${P.FAQ.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div>
+      <h3>このアプリについて</h3>
       <ul class="asrc">${P.SOURCES.map(([k, t, l, u]) => `<li><b>${k}</b>${esc(t)}${u ? ` <a href="${u}" target="_blank" rel="noopener">${l}</a>` : ''}</li>`).join('')}
-        <li><b>地図</b>OpenFreeMap © OpenMapTiles © OpenStreetMap。区間の線は OpenStreetMap から作成。</li></ul>
+        <li><b>地図</b>${credit}。区間の線は OpenStreetMap から作成。表示に <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>・<a href="https://maplibre.org" target="_blank" rel="noopener">MapLibre</a> を使っています。</li>
+        <li><b>検索</b>地名の検索・住所は<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院</a>の仕組みを使っています。</li></ul>
       <p class="anote">現地の標識・メーターの表示が優先されます。</p>
       ${P.shown ? legalLinks() : ''}
       <p class="acontact">お問い合わせ：<a href="mailto:${SUPPORT}">${SUPPORT}</a><br>運営：${SELLER}</p>
