@@ -9,6 +9,8 @@
     proShown: false,       // 販売前でも、有料プランの機能を鍵付きで見せる（購入は「準備中」）
     storeProductId: 'jp.tesseras.parkingmetermap.pro', // App Store の商品 ID（買い切り・非消耗型）
     legalPublished: false, // 特商法の表記・プライバシーポリシーを公開したら true
+    privacyUrl: '',        // プライバシーポリシーの URL（ヘルプに出す。App Store の審査で必要）
+    supportUrl: '',        // サポートの URL
     adsEnabled: false,     // 広告（AdMob）を出すなら true
     admobBannerId: '',     // AdMob のバナーの広告ユニット ID（ca-app-pub-…/…）
     admobTesting: true,    // テスト広告を出す（本番の ID にしたら false）
@@ -427,6 +429,7 @@
         <li><b>検索</b>地名の検索・住所は<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院</a>の仕組みを使っています。</li></ul>
       <p class="anote">現地の標識・メーターの表示が優先されます。</p>
       ${P.shown ? legalLinks() : ''}
+      ${CFG.privacyUrl ? `<p class="blegal"><a href="${CFG.privacyUrl}" target="_blank" rel="noopener">プライバシーポリシー</a>${CFG.supportUrl ? `<a href="${CFG.supportUrl}" target="_blank" rel="noopener">サポート</a>` : ''}</p>` : ''}
       <p class="acontact">お問い合わせ：<a href="mailto:${SUPPORT}">${SUPPORT}</a><br>運営：${SELLER}</p>
       <button class="cancel" type="button" data-cancel>閉じる</button>`);
   };
