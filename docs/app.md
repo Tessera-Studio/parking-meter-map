@@ -63,7 +63,7 @@ Android Studio で、右上のエミュレーター（Pixel など）を選ん�
 
 ## これから（順番）
 
-**まずは iPhone 版から**仕上げる（2026-10-17 に決定）。Android は iPhone 版が App Store に出てから。
+**まずは iPhone 版から**仕上げる（2026-10-17 に決定）。Android はそのあと。
 
 1. **いまの段階**：雛形。Web の画面がそのままアプリで動く
 2. 有料プランをストアの購入に（RevenueCat。App Store / Google Play）。Stripe・Cloudflare の仕組み（`functions/`・`lib/`・`scripts/pro-keys.mjs`）と、メールでの復元はやめる。仕様は docs/pro-ads.md を書き直す
