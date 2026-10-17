@@ -1,8 +1,8 @@
 # パーキング・メーター・マップ / Tokyo Parking Meter Map
 
-東京・大阪・神奈川・札幌・京都のパーキング・メーター／パーキング・チケットの設置区間 **915区間**（東京752・神奈川107・大阪41・札幌10・京都5）を、地図と「近い順」の一覧で探せるウェブアプリです。
+東京・大阪・神奈川・札幌・京都のパーキング・メーター／パーキング・チケットの設置区間 **915区間**（東京752・神奈川107・大阪41・札幌10・京都5）を、地図と「近い順」の一覧で探せるアプリです。
 
-👉 **https://hodakamiwako-art.github.io/parking-meter-map/**
+**iPhone・Android のアプリ**として出します（Capacitor。Web 版はやめる予定）。動かし方は [docs/app.md](docs/app.md)。
 
 ## できること
 
@@ -112,6 +112,10 @@ python3 build/build.py --holidays   # 内閣府の祝日一覧から data/holida
 ## 構成
 
 ```
+package.json      アプリ（Capacitor）のコマンド。npm run ios / npm run android
+capacitor.config.json  アプリの ID・名前
+ios/ android/     アプリのプロジェクト（docs/app.md）
+scripts/build-www.mjs  画面のファイルを www/ にまとめる
 index.html        画面
 app.js            アプリ本体（Leaflet）
 zones.js          GeoJSON をアプリの形にそろえる
@@ -133,7 +137,7 @@ vendor/           Leaflet 1.9.4
 `index.html` の読み込み先に中身から作った版番号（`?v=…`）が付き、公開後に古いファイルが混ざらなくなります。
 （GitHub Pages はファイルを10分間キャッシュさせるので、更新直後は再読み込みが必要なことがあります）
 
-ビルド不要の静的サイトです。`python3 -m http.server 4173` を実行し、http://localhost:4173/ を開きます。
+画面だけを確かめるときは、`python3 -m http.server 4173` を実行し、http://localhost:4173/ を開きます。アプリとして動かすときは [docs/app.md](docs/app.md)。
 
 ## 地図の下地について
 
