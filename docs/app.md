@@ -7,6 +7,7 @@
 |---|---|
 | アプリ名（ホーム画面） | メーターマップ（`capacitor.config.json` の appName、iOS の `CFBundleDisplayName`、Android の `app_name`） |
 | アプリの ID（Bundle ID / applicationId） | `jp.tesseras.parkingmetermap` |
+| 対応機種 | iPhone だけ・縦向きだけ（`TARGETED_DEVICE_FAMILY = 1`） |
 | Capacitor | 8 |
 | iOS の依存の管理 | Swift Package Manager（CocoaPods は使わない） |
 | 画面のファイルの置き場 | `www/`（`npm run build` が作る。Git には入れない） |
@@ -99,4 +100,4 @@ Android Studio で、右上のエミュレーター（Pixel など）を選ん�
 4. ~~「ここへ行く」で地図アプリを確実に開く~~（済み：@capacitor/app-launcher。シミュレーターには Google マップのアプリがないので、Google は Safari で開く）
 5. ~~アイコン・起動画面~~（済み：iPhone。渡されたデザイン `build/app-icons/source/design-2026-10-18.webp` による。アイコンは線で描き直したもの（`node build/app-icons/render.js`）、起動画面はデザインの右半分を拡大して使う（`python3 build/app-icons/splash-from-design.py`）。Android は Android 版を作るときに）
 6. Web 版をやめる：GitHub の **Settings → Pages** で公開を止める
-7. App Store・Google Play への申請（ストアの説明文・スクリーンショット・プライバシーの申告）
+7. App Store への申請：文章・プライバシーの申告・スクリーンショットの撮り方は docs/appstore.md
