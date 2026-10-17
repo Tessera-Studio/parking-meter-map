@@ -27,37 +27,67 @@ const mark = (pin = '#fff', meter = BLUE) => `
   <circle cx="512" cy="390" r="22" fill="${meter}"/>
   <rect x="380" y="420" width="264" height="10" rx="5" fill="${pin}"/>`;
 
-// 街の通り（起動画面の下。2732 の枠。地平線 y=2150、消える点は x=1366）。縦長の画面では x=736〜1996 が見える
+// 街の通り（起動画面の下。2732 の枠）。消える点（x=1366, y=2150）に向かう遠近で、ビルは正面と道側の側面を描き、
+// 遠いものほど空の色に溶けるようにして奥行きを出す。縦長の画面では x=736〜1996 が見える
 const street = () => {
-  const VX = 1366, HY = 2150, BOT = 2732;
-  const at = (x0, t) => VX + (x0 - VX) * t; // 下の端の x0 から、地平線に向かって t（0〜1）のところの x
-  const yAt = t => HY + (BOT - HY) * t;
-  let s = '';
-  // ビル（奥：うすい、手前：少し濃い）。屋上の高さをそろえすぎない
-  const row = (list, c, wc) => list.map(([x, w, h]) => {
-    let r = `<rect x="${x}" y="${HY - h}" width="${w}" height="${h}" fill="${c}"/>`;
-    for (let yy = HY - h + 36; yy < HY - 40; yy += 56) r += `<rect x="${x + 22}" y="${yy}" width="${w - 44}" height="14" rx="4" fill="${wc}"/>`;
-    return r;
-  }).join('');
-  s += row([[560, 150, 300], [720, 120, 420], [850, 170, 340], [1030, 130, 470], [1170, 110, 360], [1480, 120, 380], [1610, 150, 480], [1770, 120, 330], [1900, 170, 420], [2080, 130, 300]], '#4F98F3', 'rgba(255,255,255,.18)');
-  s += row([[380, 230, 380], [620, 170, 250], [1890, 190, 270], [2090, 240, 400]], '#3B89EF', 'rgba(255,255,255,.16)');
-  // 歩道と道
-  s += `<rect x="0" y="${HY}" width="2732" height="${BOT - HY}" fill="#2F7FEC"/>`;
-  s += `<path d="M${VX - 40} ${HY} H${VX + 40} L2450 ${BOT} H282 Z" fill="#76AEF6"/>`;
-  s += `<path d="M${VX - 24} ${HY} H${VX + 24} L2250 ${BOT} H482 Z" fill="#0B5ED0"/>`;
-  for (let k = 0; k < 7; k++) {
-    const t0 = (k + 0.15) / 7, t1 = (k + 0.6) / 7, q0 = t0 ** 1.8, q1 = t1 ** 1.8;
-    const w0 = 3 + 20 * q0, w1 = 3 + 20 * q1;
-    s += `<path d="M${VX - w0} ${yAt(q0)} H${VX + w0} L${VX + w1} ${yAt(q1)} H${VX - w1} Z" fill="#fff" opacity=".7"/>`;
-  }
-  // 並木（道の両側。手前ほど大きい）
-  [0.12, 0.25, 0.42, 0.65, 0.95].forEach(t => {
-    const r = 18 + 120 * t, y = yAt(t * 0.55);
-    [380, 2352].forEach(x0 => { const x = at(x0, t); s += `<rect x="${x - r * 0.08}" y="${y - r * 1.5}" width="${r * 0.16}" height="${r * 1.5}" fill="#1B63D2"/><circle cx="${x}" cy="${y - r * 1.9}" r="${r}" fill="#1B63D2"/>`; });
-  });
-  // 右の歩道のパーキング・メーター（白い柱と白い頭。目盛りの窓は青）
-  s += `<g transform="translate(1560 1900) scale(0.40)"><rect x="492" y="700" width="40" height="1060" rx="12" fill="#fff"/>${mark('#2F7FEC', '#fff').replace(/<path d="M512 905[^>]*>/, '')}</g>`;
-  return s;
+  const VX = 1366, HY = 2150, H0 = 640;          // H0：目の高さ（s=1 のとき地面は HY+H0）
+  const X = (x, sc) => VX + x * sc, Y = (h, sc) => HY + (H0 - h) * sc; // 横 x・高さ h の点を、縮み sc で画面に
+  const hex = c => c.match(/\w\w/g).map(v => parseInt(v, 16));
+  const mix = (a, b, t) => '#' + hex(a).map((v, k) => Math.round(v + (hex(b)[k] - v) * t).toString(16).padStart(2, '0')).join('');
+  const HAZE = '#9CC7FA', SMAX = 0.62;
+  const haze = sc => Math.min(1, Math.max(0, 1 - sc / SMAX)) ** 0.8;
+  const items = []; // [縮み, svg]
+  // ビル：横 x0〜x1（道側が x0）、手前 z1・奥 z2、高さ h
+  const building = (x0, x1, z1, z2, h, base) => {
+    const s1 = 1 / z1, s2 = 1 / z2, k = haze(s1);
+    const front = mix(base, HAZE, k), side = mix(mix(base, '#0A3F9E', 0.28), HAZE, k), win = mix('#D6E8FF', HAZE, k);
+    const fx0 = X(x0, s1), fx1 = X(x1, s1), ft = Y(h, s1), fb = Y(0, s1), sx = X(x0, s2), st = Y(h, s2), sb = Y(0, s2);
+    let g = `<path d="M${fx0} ${ft} L${sx} ${st} L${sx} ${sb} L${fx0} ${fb} Z" fill="${side}"/>`;
+    g += `<rect x="${Math.min(fx0, fx1)}" y="${ft}" width="${Math.abs(fx1 - fx0)}" height="${fb - ft}" fill="${front}"/>`;
+    g += `<rect x="${Math.min(fx0, fx1)}" y="${ft}" width="${Math.abs(fx1 - fx0)}" height="${(fb - ft) * 0.5}" fill="url(#lit)"/>`;
+    for (let f = 0.1; f < 0.9; f += 0.11) { // 窓の帯（正面と側面）
+      const a = ft + (fb - ft) * f, b = st + (sb - st) * f, th = (fb - ft) * 0.035, tb = (sb - st) * 0.035;
+      g += `<path d="M${fx0} ${a} L${sx} ${b} L${sx} ${b + tb} L${fx0} ${a + th} Z" fill="${win}" opacity=".35"/>`;
+      g += `<rect x="${Math.min(fx0, fx1) + Math.abs(fx1 - fx0) * 0.12}" y="${a}" width="${Math.abs(fx1 - fx0) * 0.76}" height="${th}" rx="${th / 2}" fill="${win}" opacity=".45"/>`;
+    }
+    items.push([s1, g]);
+  };
+  const tree = (x, z) => {
+    const sc = 1 / z, k = haze(sc), cx = X(x, sc), by = Y(0, sc), r = 150 * sc, th = 230 * sc;
+    const c1 = mix('#1F6FDC', HAZE, k), c2 = mix('#5FA5F6', HAZE, k), tr = mix('#1559BF', HAZE, k);
+    items.push([sc, `<ellipse cx="${cx}" cy="${by}" rx="${r * 0.9}" ry="${r * 0.18}" fill="#0A4FB8" opacity="${0.25 * (1 - k)}"/>
+      <rect x="${cx - r * 0.07}" y="${by - th}" width="${r * 0.14}" height="${th}" fill="${tr}"/>
+      <circle cx="${cx}" cy="${by - th - r * 0.6}" r="${r}" fill="${c1}"/>
+      <circle cx="${cx - r * 0.28}" cy="${by - th - r * 0.86}" r="${r * 0.62}" fill="${c2}" opacity=".55"/>`]);
+  };
+  // 左右の街並み（道側の面は x=±1150）
+  const L = [[3.2, 4.4, 1500], [4.6, 5.6, 1050], [5.8, 7.4, 1750], [7.6, 9.0, 1250], [9.2, 11.5, 1900], [11.8, 14, 1350], [14.3, 18, 1700], [18.4, 24, 1400]];
+  const R = [[3.0, 4.0, 1250], [4.2, 5.9, 1800], [6.1, 7.2, 1100], [7.4, 9.4, 1600], [9.6, 11.2, 1200], [11.5, 14.5, 1850], [14.8, 18.5, 1300], [18.9, 24, 1650]];
+  L.forEach(([z1, z2, h], n) => building(-1150, -2300, z1, z2, h, n % 2 ? '#4A93F2' : '#3F8AF0'));
+  R.forEach(([z1, z2, h], n) => building(1150, 2300, z1, z2, h, n % 2 ? '#3F8AF0' : '#4A93F2'));
+  [2.2, 3.4, 4.8, 6.6, 9, 12.5, 17].forEach(z => { tree(-930, z); if (z > 3) tree(930, z + 0.6); });
+  // 右の歩道のパーキング・メーター（白・影付き）
+  { const z = 2.3, sc = 1 / z, cx = X(960, sc), by = Y(0, sc), m = 0.78 * sc; // 道の端（760）とビル（1150）のあいだの歩道に立てる。縦長の画面でも切れない位置
+    items.push([sc, `<ellipse cx="${cx + 30 * m}" cy="${by}" rx="${120 * m}" ry="${22 * m}" fill="#083F96" opacity=".35"/>
+      <g transform="translate(${cx - 512 * m} ${by - 1760 * m}) scale(${m})"><rect x="492" y="700" width="40" height="1060" rx="12" fill="url(#pole)"/>
+      ${mark('#2F7FEC', '#fff').replace(/<path d="M512 905[^>]*>/, '')}</g>`]); }
+  // 空・地面・道
+  let out = `<defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${BLUE}"/><stop offset=".62" stop-color="#1E7BEE"/><stop offset=".79" stop-color="#5FA5F6"/><stop offset="1" stop-color="#2F7FEC"/></linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="road" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5D9EF0"/><stop offset=".25" stop-color="#2173E0"/><stop offset="1" stop-color="#0750BE"/></linearGradient>
+    <linearGradient id="walk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8BBDF8"/><stop offset="1" stop-color="#3D8BF0"/></linearGradient>
+    <linearGradient id="lit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="pole" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#C9DDF8"/></linearGradient>
+  </defs>`;
+  out += `<rect x="0" y="1500" width="2732" height="1232" fill="url(#sky)"/>`;
+  out += `<ellipse cx="${VX}" cy="${HY}" rx="900" ry="260" fill="url(#glow)"/>`;
+  out += `<path d="M0 ${HY} H2732 V2732 H0 Z" fill="url(#walk)"/>`;
+  out += `<path d="M${VX} ${HY} L${X(-760, 1.3)} ${Y(0, 1.3)} H${X(760, 1.3)} Z" fill="url(#road)"/>`;
+  [-760, 760].forEach(x => { out += `<path d="M${VX} ${HY} L${X(x - 40, 1.3)} ${Y(0, 1.3)} L${X(x, 1.3)} ${Y(0, 1.3)} Z" fill="#E4F0FF" opacity=".75"/>`; });
+  for (let z = 1.1; z < 30; z *= 1.45) { const a = 1 / z, b = 1 / (z * 1.2), w = 18; out += `<path d="M${X(-w, a)} ${Y(0, a)} L${X(w, a)} ${Y(0, a)} L${X(w, b)} ${Y(0, b)} L${X(-w, b)} ${Y(0, b)} Z" fill="#fff" opacity=".8"/>`; }
+  items.sort((p, q) => p[0] - q[0]).forEach(([, g]) => { out += g; });
+  return out;
 };
 
 const FONT = "'Zen Kaku Gothic New','IPAGothic',sans-serif";
