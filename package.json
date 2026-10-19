@@ -4,7 +4,7 @@
   "private": true,
   "description": "パーキング・メーター・マップ（iPhone・Android アプリ）",
   "scripts": {
-    "build": "python3 build/stamp.py && node scripts/build-www.mjs",
+    "build": "node scripts/build-www.mjs",
     "sync": "npm run build && npx cap sync",
     "ios": "npm run sync && npx cap open ios",
     "android": "npm run sync && npx cap open android"

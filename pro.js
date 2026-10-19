@@ -445,13 +445,16 @@
   let adLastH = 0; // 最後に知らされたバナーの高さ。出し直したときは知らせが来ないので、これを使う
   function setAdH(h) { document.documentElement.style.setProperty('--ad-h', `${Math.max(0, Math.round(h || 0))}px`); }
   async function initAds() {
+    // 返事が来なくても先に進む（待ったまま止まると、広告がいつまでも出ない）
+    const within = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);
     if (!adInit) adInit = (async () => {
-      // トラッキングの許可（App Tracking Transparency）：起動時ではなく、初めて広告を出す前に1回だけ聞く
+      if (window.pmmSplashGone) await within(window.pmmSplashGone, 5000);
+      // トラッキングの許可（App Tracking Transparency）：起動画面が消えてから、初めて広告を出す前に1回だけ聞く
       try {
-        const { status } = await admob.trackingAuthorizationStatus();
-        if (status === 'notDetermined') await admob.requestTrackingAuthorization();
+        const { status } = await within(admob.trackingAuthorizationStatus(), 3000) || {};
+        if (status === 'notDetermined') await within(admob.requestTrackingAuthorization(), 60000);
       } catch (e) {}
-      await admob.initialize({ initializeForTesting: !!CFG.admobTesting });
+      await within(admob.initialize({ initializeForTesting: !!CFG.admobTesting }), 8000);
       try {
         await admob.addListener('bannerAdSizeChanged', info => {
           if (info && info.height > 0) adLastH = info.height;
