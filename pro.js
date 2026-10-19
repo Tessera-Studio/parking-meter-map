@@ -16,7 +16,7 @@
     admobTesting: true,    // テスト広告を出す（本番の ID にしたら false）
   }, window.PMM_CONFIG || {});
 
-  const PRICE = '480円';
+  const PRICE = '500円';
   const SELLER = '合同会社Tessera Studio';
   const SELLER_SHORT = 'Tessera Studio';
   const SUPPORT = 'support@tesseras.jp';
@@ -48,6 +48,7 @@
   const store = cap && cap.isNativePlatform && cap.isNativePlatform() && cap.Plugins && cap.Plugins.NativePurchases || null;
   P.store = !!store;
   let busy = false;
+  let checked = !store; // App Store で持っているかを1回確かめ終えたか（それまでは広告を出さない）
 
   // 持っているか：StoreKit の「いま有効な購入」（返金されたものは入らない。署名を確かめたものだけ）に商品があるか
   async function refreshOwned() {
@@ -57,6 +58,7 @@
       const t = (purchases || []).find(x => x.productIdentifier === CFG.storeProductId);
       setOwned(t ? { at: Date.parse(t.purchaseDate) || Date.now() } : null);
     } catch (e) { /* 確かめられないときは、前回の結果のまま */ }
+    if (!checked) { checked = true; if (P.syncAds) P.syncAds(); }
   }
   function setOwned(o) {
     const was = P.on;
@@ -65,7 +67,7 @@
     try { o ? localStorage.setItem(K.pro, JSON.stringify(o)) : localStorage.removeItem(K.pro); } catch (e) {}
     if (was !== P.on) afterChange();
   }
-  // 値段はストアの表示（端末の国・通貨）に合わせる。取れないときは 480円 のまま
+  // 値段はストアの表示（端末の国・通貨）に合わせる。取れないときは 500円 のまま
   async function loadPrice() {
     if (!store) return;
     try {
@@ -434,10 +436,10 @@
       <button class="cancel" type="button" data-cancel>閉じる</button>`);
   };
 
-  /* ---------- 広告（AdMob のバナー。詳細・タイマーを開いているあいだだけ、画面の一番下に） ---------- */
-  // バナーはネイティブの表示で、画面のいちばん下に重なる。高さは --ad-h に入れ、詳細のシートの下に同じだけ余白を空ける
+  /* ---------- 広告（AdMob のバナー。無料のときは画面の一番下にいつも。上にシートが開いたら隠す） ---------- */
+  // バナーはネイティブの表示で、画面のいちばん下に重なる。高さは --ad-h に入れ、カード・右下のボタン・タイマー・詳細をその分上げる
   const admob = cap && cap.isNativePlatform && cap.isNativePlatform() && cap.Plugins && cap.Plugins.AdMob || null;
-  const adsOn = () => !!(CFG.adsEnabled && admob && CFG.admobBannerId && !P.on);
+  const adsOn = () => !!(CFG.adsEnabled && admob && CFG.admobBannerId && !P.on && checked);
   let adState = 'none'; // none（まだ出していない）・shown・hidden
   let adInit = null;
   function setAdH(h) { document.documentElement.style.setProperty('--ad-h', `${Math.max(0, Math.round(h || 0))}px`); }
@@ -456,12 +458,11 @@
     })();
     return adInit;
   }
-  // いま広告を出してよいか：詳細かタイマーを開いていて、ほかのシート（購入・「ここへ行く」・お気に入り）が上にないとき
+  // いま広告を出してよいか：メイン画面・詳細・タイマーで出す。ほかのシート（購入・「ここへ行く」・お気に入り）が上にあるときは隠す
   function wantAd() {
     if (!adsOn()) return false;
     const open = id => { const e = document.getElementById(id); return e && !e.hidden; };
-    if (open('buyScrim') || open('goScrim') || open('favSheet')) return false;
-    return (typeof state !== 'undefined' && state.detail) || open('timer');
+    return !(open('buyScrim') || open('goScrim') || open('favSheet'));
   }
   let adBusy = Promise.resolve();
   P.syncAds = function () {
