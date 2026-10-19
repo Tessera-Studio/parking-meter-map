@@ -1058,6 +1058,17 @@ function bind() {
   setInterval(tickTimer, 1000);
 }
 
+// 起動画面（アプリだけ。@capacitor/splash-screen）：地図とカードの準備ができたら閉じる。最低 0.8 秒は見せ、4 秒たったら必ず閉じる
+const BOOT_AT = Date.now();
+let splashDone = false;
+function hideSplash() {
+  if (splashDone) return;
+  splashDone = true;
+  const sp = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.SplashScreen;
+  if (sp) setTimeout(() => sp.hide({ fadeOutDuration: 300 }).catch(() => {}), Math.max(0, 800 - (Date.now() - BOOT_AT)));
+}
+setTimeout(hideSplash, 4000);
+
 async function boot() {
   initMap();
   bind();
@@ -1066,6 +1077,7 @@ async function boot() {
     zones = Zones.normalize(await (await fetch('data/zones.geojson', { cache: 'no-cache' })).json());
   } catch (e) {
     $('#empty').hidden = false;
+    hideSplash();
     return;
   }
   zones.forEach(z => { z.bounds = L.latLngBounds(z.lines.flat()); });
@@ -1079,6 +1091,7 @@ async function boot() {
   // カードが出て見えている範囲が変わったので、現在地へ寄せ直す（まだ地図を触っていなければ）
   const target = autoCentered || startHere;
   if (target && !state.moved) centerOn(target, map.getZoom());
+  hideSplash();
   Pro.init(); // App Store で有料プランを持っているか確かめる（通知の予約もそこで作り直す）
 }
 

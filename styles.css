@@ -406,7 +406,8 @@ body.in-detail .top,body.in-detail .cards,body.in-detail .mapctl{display:none}
 .tin /* 広い画面：検索欄の列は最大600pxなので、★ボタンもタイマーボタンの真下にそろえる */
 
 /* 「？」ボタン（右上） */
-.helpbtn{font:700 24px/1 var(--f-body);color:var(--ink)}
+.helpbtn{color:var(--ink)}
+.helpbtn svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 /* よくある質問 */
 .faq{display:grid;border-top:1px solid var(--line)}
 .faq details{border-bottom:1px solid var(--line)}
