@@ -1065,8 +1065,13 @@ function hideSplash() {
   if (splashDone) return;
   splashDone = true;
   const sp = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.SplashScreen;
-  if (sp) setTimeout(() => sp.hide({ fadeOutDuration: 300 }).catch(() => {}), Math.max(0, 800 - (Date.now() - BOOT_AT)));
+  const wait = sp ? Math.max(0, 800 - (Date.now() - BOOT_AT)) : 0;
+  if (sp) setTimeout(() => sp.hide({ fadeOutDuration: 300 }).catch(() => {}), wait);
+  setTimeout(splashGone, wait + 400); // 消え終わったら、広告（とトラッキングの確認）を始めてよい
 }
+// 起動画面が消え終わったら解ける約束。トラッキングの確認は、起動画面の最中に出すと iPhone に無視されることがある
+let splashGone;
+window.pmmSplashGone = new Promise(r => { splashGone = r; });
 setTimeout(hideSplash, 4000);
 
 async function boot() {
