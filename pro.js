@@ -442,6 +442,7 @@
   const adsOn = () => !!(CFG.adsEnabled && admob && CFG.admobBannerId && !P.on && checked);
   let adState = 'none'; // none（まだ出していない）・shown・hidden
   let adInit = null;
+  let adLastH = 0; // 最後に知らされたバナーの高さ。出し直したときは知らせが来ないので、これを使う
   function setAdH(h) { document.documentElement.style.setProperty('--ad-h', `${Math.max(0, Math.round(h || 0))}px`); }
   async function initAds() {
     if (!adInit) adInit = (async () => {
@@ -452,7 +453,10 @@
       } catch (e) {}
       await admob.initialize({ initializeForTesting: !!CFG.admobTesting });
       try {
-        await admob.addListener('bannerAdSizeChanged', info => setAdH(adState === 'shown' ? info && info.height : 0));
+        await admob.addListener('bannerAdSizeChanged', info => {
+          if (info && info.height > 0) adLastH = info.height;
+          setAdH(adState === 'shown' ? adLastH : 0);
+        });
         await admob.addListener('bannerAdFailedToLoad', () => setAdH(0));
       } catch (e) {}
     })();
@@ -475,7 +479,7 @@
           const first = adState === 'none';
           adState = 'shown'; // 高さの知らせが表示の途中で届くので、先に切り替える
           if (first) await admob.showBanner({ adId: CFG.admobBannerId, adSize: 'ADAPTIVE_BANNER', position: 'BOTTOM_CENTER', margin: 0, isTesting: !!CFG.admobTesting });
-          else await admob.resumeBanner();
+          else { await admob.resumeBanner(); setAdH(adLastH); }
         } else if (!want && adState === 'shown') {
           await admob.hideBanner();
           adState = 'hidden';
