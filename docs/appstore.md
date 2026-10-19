@@ -171,7 +171,7 @@ The zone data is created by us from public information released by each prefectu
 - [ ] 法人情報の変更（Apple Developer Program）の完了
 - [ ] App Store Connect に「有料アプリ契約」・銀行口座・税の情報
 - [ ] 本番の AdMob の ID（`Info.plist` の `GADApplicationIdentifier`・`config.js` の `admobBannerId`、`admobTesting: false`）と `SKAdNetworkItems` の一覧（docs/pro-ads.md §23 の 6）
-- [ ] プライバシーポリシーに所在地を書き足す（変更登記の完了後）
+- [x] プライバシーポリシーに所在地を書き足した
 - [ ] Sandbox の Apple ID で、実機で購入・復元を試す
 - [ ] Xcode の Product → Archive → Distribute App で App Store Connect にアップロード
 - [ ] Web 版（`index.html` の地図）をやめる：`privacy.html`・`support.html` だけを残す
