@@ -54,7 +54,7 @@ App Store Connect に入れる文章・申告・画像の下書きです。法�
 ■ 地図アプリで案内
 「ここへ行く」から、Apple マップ・Google マップで経路を開けます。
 
-■ 有料プラン（480円・買い切り）
+■ 有料プラン（500円・買い切り）
 ・タイマー：停めた時刻から最大時間までの残りを数え、終わる10分前と時間になったときに通知します。車の場所にもすぐ戻れます。
 ・お気に入り：よく使う区間と行き先を保存できます。
 ・広告が出なくなります。
@@ -86,7 +86,7 @@ App Store Connect に入れる文章・申告・画像の下書きです。法�
 | 参照名 | 有料プラン |
 | 製品 ID | `jp.tesseras.parkingmetermap.pro` |
 | 種類 | 非消耗型 |
-| 価格 | 480円（Tier に相当する価格） |
+| 価格 | 500円 |
 | 表示名（30文字まで） | 有料プラン |
 | 説明（45文字まで） | タイマーとお気に入りが使え、広告が出なくなります |
 | 審査用のスクリーンショット | 有料プランのシート（タイマーかお気に入りを押したときの画面）を1枚 |
@@ -108,7 +108,7 @@ How to review:
 - The map opens at the current location. If the device is outside Japan, search "Ginza" in the search field to see zones.
 - In-app purchase (non-consumable, "有料プラン"): tap the timer button or the star button at the bottom right. The sheet shows the purchase button and "Restore purchases".
 - Location is used only on the device to show nearby zones. Notifications are used only for the parking timer (10 minutes before and at the end).
-- App Tracking Transparency is requested once, just before the first banner ad is shown (free users only).
+- App Tracking Transparency is requested once, just before the first banner ad is shown (free users only; the banner is at the bottom of the screen).
 
 The zone data is created by us from public information released by each prefectural police; it is not provided by the police.
 ```

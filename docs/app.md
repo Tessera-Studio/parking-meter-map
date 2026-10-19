@@ -55,14 +55,14 @@ Android Studio で、右上のエミュレーター（Pixel など）を選ん�
 
 ## 有料プランの購入を試す（シミュレーター・StoreKit）
 
-購入は App Store のアプリ内課金（StoreKit 2。プラグイン @capgo/native-purchases）。Xcode の **StoreKit 設定ファイル**を使うと、App Store Connect に商品を登録する前でも、シミュレーターで購入・復元・返金を試せる（お金はかからない）。商品は `ios/App/Products.storekit` に入れてある（商品 ID `jp.tesseras.parkingmetermap.pro`・非消耗型・480円）。
+購入は App Store のアプリ内課金（StoreKit 2。プラグイン @capgo/native-purchases）。Xcode の **StoreKit 設定ファイル**を使うと、App Store Connect に商品を登録する前でも、シミュレーターで購入・復元・返金を試せる（お金はかからない）。商品は `ios/App/Products.storekit` に入れてある（商品 ID `jp.tesseras.parkingmetermap.pro`・非消耗型・500円）。
 
 初回だけ、Xcode で次の2つを行う：
 
 1. **ファイルをプロジェクトに入れる**：左の一覧の一番上の「App」（青いアイコン）を右クリック →「Add Files to "App"…」→ `ios/App/Products.storekit` を選ぶ →「Add」（Targets のチェックは外してよい）
 2. **スキームに設定する**：メニューの **Product → Scheme → Edit Scheme…** → 左の「Run」→ 上の「Options」タブ →「StoreKit Configuration」で **Products.storekit** を選ぶ →「Close」
 
-そのあと ▶ で起動し、タイマーか★を押す →「¥480で購入する」→ 購入の確認が出る →「購入」。鍵が外れれば成功。
+そのあと ▶ で起動し、タイマーか★を押す →「¥500で購入する」→ 購入の確認が出る →「購入」。鍵が外れれば成功。
 
 - **返金を試す**：メニューの **Debug → StoreKit → Manage Transactions…** で購入を選び、右クリック →「Refund Purchases」。アプリに戻ると鍵が付き直す
 - **最初からやり直す**：同じ画面で購入を選んで削除（ゴミ箱）。アプリを消して入れ直すと、前回の記録も消える
@@ -70,12 +70,12 @@ Android Studio で、右上のエミュレーター（Pixel など）を選ん�
 
 ## 広告（AdMob）
 
-詳細とタイマーを開いているあいだだけ、画面の一番下に AdMob のバナーが出る（有料プランでは出ない。仕様は docs/pro-ads.md §16）。いまは **Google のテスト用 ID** なので、シミュレーターでは「Test Ad」と書かれた広告が出る（押してもお金は動かない）。
+無料のときは、画面の一番下に AdMob のバナーが出る（メイン画面・詳細・タイマー。上にシートが開くと隠れる）（有料プランでは出ない。仕様は docs/pro-ads.md §16）。いまは **Google のテスト用 ID** なので、シミュレーターでは「Test Ad」と書かれた広告が出る（押してもお金は動かない）。
 
 - アプリ ID：`ios/App/App/Info.plist` の `GADApplicationIdentifier`（ない・間違っていると、アプリが起動してすぐ落ちる）
 - バナーの ID：`config.js` の `admobBannerId`。テスト広告：`admobTesting: true`
 - 本番にするときの手順：docs/pro-ads.md §23 の 6
-- トラッキングの許可の確認は、無料で初めて詳細かタイマーを開いたときに1回だけ出る。もう一度試すときは、シミュレーターでアプリを消して入れ直す（または「設定 → プライバシーとセキュリティ → トラッキング」）
+- トラッキングの許可の確認は、無料で初めてアプリを開いたとき（最初の広告の前）に1回だけ出る。もう一度試すときは、シミュレーターでアプリを消して入れ直す（または「設定 → プライバシーとセキュリティ → トラッキング」）
 
 ## タイマーの通知
 
