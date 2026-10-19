@@ -940,9 +940,17 @@ function fitPref(pref) {
   showPanel('');
   state.moved = true;
   if (state.dest) clearDest(false);
-  const pts = zones.filter(z => z.pref === pref).flatMap(z => z.lines.flat());
-  if (pts.length) map.fitBounds(L.latLngBounds(pts), { animate: false, ...pad() });
+  // 全域を収めると線が細かすぎて分かりにくいので、区間がいちばん集まっているところを、ズーム14で見せる
+  const zs = zones.filter(z => z.pref === pref);
+  if (!zs.length) return;
+  let best = zs[0], most = -1;
+  zs.forEach(z => {
+    const n = zs.reduce((k, o) => k + (meters(z.center, o.center) < 1500 ? 1 : 0), 0);
+    if (n > most) { most = n; best = z; }
+  });
+  centerOn(best.center, PREF_ZOOM);
 }
+const PREF_ZOOM = 14;
 
 /* ---------- 現在地 ---------- */
 function showHere(p) {
