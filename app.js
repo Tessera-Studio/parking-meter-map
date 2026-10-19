@@ -644,7 +644,7 @@ function updateTimerBtn() {
   b.classList.toggle('locked', Pro.gated());
   if (left == null) {
     b.innerHTML = I.timer + (Pro.gated() ? `<i class="lock" aria-hidden="true">${svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>')}</i>` : '');
-    b.setAttribute('aria-label', Pro.gated() ? 'タイマー（有料プラン）' : 'タイマー');
+    b.setAttribute('aria-label', Pro.gated() ? 'タイマー（プレミアム）' : 'タイマー');
     return;
   }
   if (!b.querySelector('b')) b.innerHTML = '<small></small><b></b>';
@@ -692,7 +692,7 @@ function renderTimer() {
         <div><span>最大 · 料金</span><b>${z ? esc(`${fmtLimit(z) || '—'} · ${fmtFee(z) || '—'}`) : '—'}</b></div>
       </div>
       <div class="tnotify">
-        <label class="switch${locked ? ' locked' : ''}"><span>終わる10分前に知らせる${locked ? `<i class="lock" aria-label="有料プランの機能">${svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>')}</i>` : ''}</span><input type="checkbox" id="tnotify" role="switch"${notify ? ' checked' : ''}${locked ? ' data-locked' : ''}></label>
+        <label class="switch${locked ? ' locked' : ''}"><span>終わる10分前に知らせる${locked ? `<i class="lock" aria-label="プレミアムの機能">${svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>')}</i>` : ''}</span><input type="checkbox" id="tnotify" role="switch"${notify ? ' checked' : ''}${locked ? ' data-locked' : ''}></label>
         <small>${localNotify ? '画面を閉じていても届きます（10分前と時間）' : 'ホーム画面に追加すると、画面を閉じていても届きます'}</small>
       </div>
       <button class="btn sub big" type="button" id="tcar"${running ? '' : ' disabled'}>${I.pin}車の場所を確認</button>
@@ -940,9 +940,17 @@ function fitPref(pref) {
   showPanel('');
   state.moved = true;
   if (state.dest) clearDest(false);
-  const pts = zones.filter(z => z.pref === pref).flatMap(z => z.lines.flat());
-  if (pts.length) map.fitBounds(L.latLngBounds(pts), { animate: false, ...pad() });
+  // 全域を収めると線が細かすぎて分かりにくいので、区間がいちばん集まっているところを、ズーム14で見せる
+  const zs = zones.filter(z => z.pref === pref);
+  if (!zs.length) return;
+  let best = zs[0], most = -1;
+  zs.forEach(z => {
+    const n = zs.reduce((k, o) => k + (meters(z.center, o.center) < 1500 ? 1 : 0), 0);
+    if (n > most) { most = n; best = z; }
+  });
+  centerOn(best.center, PREF_ZOOM);
 }
+const PREF_ZOOM = 14;
 
 /* ---------- 現在地 ---------- */
 function showHere(p) {

@@ -268,64 +268,73 @@
   // 有料プランのシート（「？」の購入・広告を消す・鍵の付いた機能から）。紺の帯に機能の見本、機能、値段、購入の順
   const PI = {
     bell: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5h4"/></svg>',
-    noad: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6" width="17" height="12" rx="2"/><path d="M4 4l16 16"/></svg>',
+    ban: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/></svg>',
+    search: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>',
+    list: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h9"/></svg>',
     x: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
-    lock: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+    crown: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 8l4.5 4 4-6 4 6 4.5-4-1.8 10H5.3z" fill="#F2B300" stroke="#F2B300" stroke-linejoin="round"/></svg>',
   };
-  const DEMO = {
-    timer: '<i class="udemo" aria-hidden="true"><svg viewBox="0 0 72 72"><circle class="bg" cx="36" cy="36" r="31"/><circle class="fg" cx="36" cy="36" r="31" stroke-dasharray="194.8" stroke-dashoffset="58"/></svg><span><small>あと</small><b>25分</b></span></i>',
-    fav: `<i class="udemo star" aria-hidden="true">${STAR}</i>`,
-    pro: '<i class="udemo app" aria-hidden="true">P</i>',
+  // 右上の白い札（機能の顔）
+  const BADGE = {
+    fav: `<i class="ubadge star" aria-hidden="true">${STAR}</i>`,
+    timer: '<i class="ubadge clock" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></i>',
+    pro: '<i class="ubadge app" aria-hidden="true">P</i>',
   };
   // I（アイコン）は app.js で作るので、開いたときに組み立てる
   const UPSELL = () => ({
-    pro: {
-      title: 'もっと便利に、<br>戻り遅れなく',
-      lead: '1回のお支払いで、ずっと使えます',
+    fav: {
+      title: 'いつもの駐車を<br>すぐ呼び出せる',
+      lead: 'よく使う駐車区間や行き先を保存して、<br>次からはすぐに探せます。',
       feats: [
-        [I.timer, 'タイマー', '残り時間を右下に表示。終わる10分前に通知し、車の場所にも戻れます。'],
-        [STAR, 'お気に入り', 'よく使う区間と行き先を保存。いま使えるかも一覧で分かります。'],
-        [PI.noad, '広告なし', '詳細・タイマーの広告が出なくなります。'],
+        [STAR, 'お気に入りに保存', 'よく使う駐車区間や行き先を保存して、次からすぐに呼び出せます。'],
+        [PI.search, '今使えるかすぐ分かる', '保存した区間が、いま使えるか、何時まで使えるかを一覧で確認できます。'],
+        [PI.list, '行き先ごとに整理', '職場・自宅・よく行く場所など、最大10件まで保存できます。'],
       ],
+      chips: ['fav', 'timer', 'ads'],
     },
     timer: {
-      title: 'タイマー',
-      lead: '停めた時刻から、最大時間までの残りを数えます',
+      title: '駐車時間を<br>もう気にしない',
+      lead: '残り時間を表示し、終了10分前に<br>お知らせします。',
       feats: [
-        [I.timer, '残り時間がひと目で分かる', '右下のボタンに「あと 25分」。残り10分を切ると赤に変わります。'],
-        [PI.bell, '終わる10分前に通知', '画面を閉じていても知らせるので、戻り遅れを防げます。'],
-        [I.car, '車の場所にすぐ戻れる', '停めた場所を覚えておき、ボタンひとつで地図を戻します。'],
+        [I.clock, '残り時間がひと目で分かる', '駐車した時間から、最大時間までの残り時間を表示します。'],
+        [PI.bell, '終了10分前にお知らせ', '画面を閉じていても通知でお知らせし、戻り遅れを防ぎます。'],
+        [I.car, '車の場所にもすぐ戻れる', '停めた場所を記録しておき、タップひとつで地図から確認できます。'],
       ],
+      chips: ['timer', 'fav', 'ads'],
     },
-    fav: {
-      title: 'お気に入り',
-      lead: 'よく使う区間と行き先を保存できます',
+    pro: {
+      title: '駐車を、<br>もっとラクに。',
+      lead: '探す・停める・戻るまで、<br>路上パーキングを快適に。',
       feats: [
-        [STAR, 'いつもの区間をすぐ呼び出せる', '詳細の☆で保存。右下の★から一覧を開き、押すだけでその区間へ。'],
-        [I.clock, 'いまの状態も一覧で分かる', '保存した区間が、いま使えるか・何時までかを一覧に表示します。'],
-        [I.pin, '行き先も保存', '職場・取引先など、よく行く場所を10件まで保存できます。'],
+        [I.clock, '駐車時間を忘れない', '残り時間を表示。終了10分前にお知らせして、戻り遅れを防ぎます。'],
+        [STAR, 'いつもの駐車をすぐ探せる', 'よく使う区間や行き先を保存し、今使えるかも一覧で確認できます。'],
+        [PI.ban, '広告なしで、見やすく', '地図・詳細・タイマーの広告を非表示にして、快適にご利用いただけます。'],
       ],
+      chips: ['timer', 'fav', 'ads'],
+      cur: 'ads',
     },
   });
+  const CHIP = { timer: 'タイマー', fav: 'お気に入り', ads: '広告なし' };
+  // 値段の表示：ストアの表示（「¥500」）を使い、取れないときは「500円」を「¥500」の形に
+  const priceLabel = () => String(P.PRICE).replace(/^([\d,]+)円$/, '¥$1');
   function proSheet(kind) {
-    const u = UPSELL()[kind];
-    const incl = [['timer', 'タイマー'], ['fav', 'お気に入り'], ['ads', '広告なし']];
+    const u = UPSELL()[kind], cur = u.cur || kind, price = priceLabel();
     openSheet(`
       <div class="uhero">
         <button class="uclose" type="button" data-cancel aria-label="閉じる">${PI.x}</button>
         <div>
-          <span class="ukick">${PI.lock}有料プラン</span>
+          <span class="ukick">${PI.crown}プレミアム</span>
           <h2 id="buyTitle">${u.title}</h2>
           <p>${u.lead}</p>
         </div>
-        ${DEMO[kind]}
+        ${BADGE[kind]}
       </div>
       <ul class="ufeat">${u.feats.map(([ic, b, t]) => `<li><i aria-hidden="true">${ic}</i><div><b>${b}</b><span>${t}</span></div></li>`).join('')}</ul>
       <div class="uprice">
-        <p><b>${P.PRICE}</b><span>買い切り・月額なし</span></p>
-        <ul aria-label="有料プランに含まれるもの">${incl.map(([k, t]) => `<li${k === kind ? ' class="cur"' : ''}>${I.check}${t}</li>`).join('')}</ul>
+        <p><b>${price}</b><span>買い切り・月額なし</span></p>
+        <ul aria-label="プレミアムに含まれるもの">${u.chips.map(k => `<li${k === cur ? ' class="cur"' : ''}>${I.check}${CHIP[k]}</li>`).join('')}</ul>
       </div>
-      <button class="btn brand big" type="button" data-buy>${P.PRICE}で購入する</button>
+      <button class="btn brand big" type="button" data-buy>${price}で使い始める</button>
       <p class="bnote">地図と時間の表示は、これまでどおり無料です</p>
       <button class="blink" type="button" data-restore>購入済みの方はこちら（復元）</button>
       ${legalLinks()}`);
@@ -335,7 +344,7 @@
 
   P.openBuy = function () {
     if (!P.shown) return;
-    if (P.on) return P.toast('有料プランをご利用中です');
+    if (P.on) return P.toast('プレミアムをご利用中です');
     proSheet('pro');
   };
 
@@ -345,7 +354,7 @@
     proSheet(kind);
   };
 
-  const READY = '有料プランの購入は準備中です。もうしばらくお待ちください';
+  const READY = 'プレミアムの購入は準備中です。もうしばらくお待ちください';
   async function checkout() {
     if (!CFG.proEnabled) return P.toast(READY);
     if (!store) return P.toast('購入は iPhone のアプリから行えます');
@@ -354,7 +363,7 @@
     try {
       await store.purchaseProduct({ productIdentifier: CFG.storeProductId, productType: 'inapp', quantity: 1 });
       await refreshOwned();
-      if (P.on) { P.closeSheet(); P.toast('有料プランになりました。ありがとうございます'); }
+      if (P.on) { P.closeSheet(); P.toast('プレミアムになりました。ありがとうございます'); }
     } catch (e) {
       const m = String(e && (e.message || e) || '');
       if (/cancel/i.test(m)) { /* 自分でやめたときは何も出さない */ }
@@ -373,7 +382,7 @@
     try {
       await store.restorePurchases();
       await refreshOwned();
-      if (P.on) { P.closeSheet(); P.toast('有料プランを復元しました'); }
+      if (P.on) { P.closeSheet(); P.toast('プレミアムを復元しました'); }
       else P.toast('この Apple ID での購入は見つかりませんでした', { ms: 5000 });
     } catch (e) { P.toast('App Store に接続できませんでした。もう一度お試しください', { ms: 5000 }); }
     finally { busy = false; }
@@ -416,15 +425,15 @@
   // 右上の「？」のメニュー：よくある質問・このアプリについて（データと地図の出典・お問い合わせ）
   P.openAbout = function () {
     const proRow = !P.shown ? ''
-      : P.on ? `<div class="arow"><b>有料プランをご利用中です</b>${P.iat ? `<small>購入日 ${new Date(P.iat * 1000).toLocaleDateString('ja-JP')}</small>` : ''}</div>`
-      : `<button class="arow btnrow" type="button" data-gopro><b>有料プランを購入（${P.PRICE}）</b><small>タイマー・お気に入り・広告なし</small></button>`;
+      : P.on ? `<div class="arow"><b>${PI.crown}プレミアムをご利用中です</b>${P.iat ? `<small>購入日 ${new Date(P.iat * 1000).toLocaleDateString('ja-JP')}</small>` : ''}</div>`
+      : `<button class="arow btnrow" type="button" data-gopro><b>${PI.crown}プレミアム（${priceLabel()}・買い切り）</b><small>タイマー・お気に入り・広告なし</small></button>`;
     const credit = typeof mapCredit === 'function' ? mapCredit() : '';
     openSheet(`
       <h2 id="buyTitle">ヘルプ</h2>
       ${proRow}
       ${P.shown ? '<button class="arow btnrow" type="button" data-restore><b>購入の復元</b></button>' : ''}
       <h3>よくある質問</h3>
-      <div class="faq">${(P.shown ? [['有料プランでは何ができますか？', `タイマーとお気に入りが使えるようになり、広告も出なくなります。${P.PRICE}の買い切りです。地図と時間の表示は、これまでどおり無料です。`], ...P.FAQ] : P.FAQ).map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div>
+      <div class="faq">${(P.shown ? [['プレミアムでは何ができますか？', `タイマーとお気に入りが使えるようになり、広告も出なくなります。${priceLabel()}の買い切りです。地図と時間の表示は、これまでどおり無料です。`], ...P.FAQ] : P.FAQ).map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div>
       <h3>このアプリについて</h3>
       <ul class="asrc">${P.SOURCES.map(([k, t, l, u]) => `<li><b>${k}</b>${esc(t)}${u ? ` <a href="${u}" target="_blank" rel="noopener">${l}</a>` : ''}</li>`).join('')}
         <li><b>地図</b>${credit}。区間の線は OpenStreetMap から作成。表示に <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>・<a href="https://maplibre.org" target="_blank" rel="noopener">MapLibre</a> を使っています。</li>

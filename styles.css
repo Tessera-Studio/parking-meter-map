@@ -349,50 +349,46 @@ body.in-detail .top,body.in-detail .cards,body.in-detail .mapctl{display:none}
 .toast{position:fixed;z-index:1500;left:50%;transform:translateX(-50%);bottom:calc(16px + var(--ad-h, 0px) + var(--cards-h) + 14px + env(safe-area-inset-bottom));max-width:calc(100% - 32px);display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:12px;background:var(--ink);color:#fff;font-size:14px;box-shadow:var(--shadow-card)}
 .toast button{flex:none;border:0;background:transparent;color:#fff;font-weight:700;text-decoration:underline;padding:0}
 /* 購入・復元・このアプリについて */
-.buysheet{max-height:88vh;overflow-y:auto}
+.buysheet{max-height:calc(100% - 16px - env(safe-area-inset-top));overflow-y:auto}
 .buysheet h3{margin:6px 0 0;font-size:13px;font-weight:700;color:var(--muted)}
+.arow b svg{width:16px;height:16px;vertical-align:-2px;margin-right:6px}
 .blink{justify-self:center;border:0;background:transparent;font-size:14px;font-weight:700;color:var(--ink-2);text-decoration:underline;padding:4px}
 .bnote{margin:0;text-align:center;font-size:13px;color:var(--muted)}
 .blegal{margin:0;display:flex;justify-content:center;flex-wrap:wrap;gap:6px 16px;font-size:12px}
 .blegal a{color:var(--muted)}
 /* 有料プランのシート：上に紺の帯（機能の見本つき）、機能、値段、購入 */
-.prosheet{gap:16px;padding-top:14px}
-.uhero{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px;padding:18px 18px 20px;border-radius:20px;background:var(--brand);color:var(--on-brand);overflow:hidden}
-.uhero > div{position:relative;display:grid;gap:4px;justify-items:start}
-.ukick{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:11px;background:rgba(255,255,255,.16);font-size:12px;font-weight:700;letter-spacing:.04em}
-.ukick svg{width:12px;height:12px;stroke-width:2.6}
-.uhero h2{margin:6px 0 0;font-size:24px;line-height:1.25;color:inherit}
-.uhero p{margin:0;font-size:14px;line-height:1.55;color:rgba(255,255,255,.82)}
-.uclose{position:absolute;z-index:1;top:10px;right:10px;width:34px;height:34px;border:0;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;display:grid;place-items:center;padding:0}
+.prosheet{gap:12px;padding-top:14px;padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+.uhero{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px;margin:-14px -20px 0;padding:18px 20px 20px;border-radius:24px;background:var(--brand);color:var(--on-brand);overflow:hidden}
+.uhero > div{position:relative;display:grid;gap:6px;justify-items:start}
+.ukick{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 12px;border-radius:13px;background:rgba(255,255,255,.14);font-size:12px;font-weight:700;letter-spacing:.06em}
+.ukick svg{width:15px;height:15px}
+.uhero h2{margin:4px 0 0;font-size:23px;line-height:1.35;letter-spacing:.02em;color:inherit}
+.uhero p{margin:0;font-size:13px;line-height:1.6;color:rgba(255,255,255,.86)}
+.uclose{position:absolute;z-index:1;top:12px;right:12px;width:36px;height:36px;border:0;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;display:grid;place-items:center;padding:0}
 .uclose svg{width:18px;height:18px}
-/* 見本：タイマーの円・★・アプリのP */
-.udemo{position:relative;flex:none;font-style:normal;width:84px;height:84px;margin-top:22px;border-radius:50%;background:#fff;color:var(--ink);display:grid;place-items:center;box-shadow:0 6px 18px rgba(0,0,0,.22)}
-.udemo > svg{position:absolute;inset:6px;width:72px;height:72px;transform:rotate(-90deg)}
-.udemo .bg{stroke:var(--off-wash);stroke-width:7}
-.udemo .fg{stroke:var(--ok);stroke-width:7;stroke-linecap:round}
-.udemo span{position:relative;display:grid;justify-items:center;line-height:1.1}
-.udemo small{font-size:10px;color:var(--muted)}
-.udemo b{font-size:19px;font-weight:700;letter-spacing:-.02em}
-.udemo.star{border-radius:22px}
-.udemo.star > svg{position:static;width:40px;height:40px;transform:none;fill:#F2B300;stroke:#F2B300}
-.udemo.app{border-radius:22px;background:#fff;color:var(--brand);font:700 46px/1 var(--f-body)}
-.ufeat{list-style:none;margin:0;padding:0 2px;display:grid;gap:14px}
+/* 右の白い札（機能の顔） */
+.ubadge{flex:none;font-style:normal;width:56px;height:56px;margin-top:20px;border-radius:16px;background:#fff;display:grid;place-items:center;box-shadow:0 6px 16px rgba(0,0,0,.18)}
+.ubadge svg{width:30px;height:30px}
+.ubadge.star svg{fill:#F2B300;stroke:#F2B300}
+.ubadge.clock svg{fill:none;stroke:var(--ok);stroke-width:2.6;stroke-linecap:round}
+.ubadge.app{color:var(--brand);font:700 32px/1 var(--f-body)}
+.ufeat{list-style:none;margin:0;padding:0 2px;display:grid;gap:10px}
 .ufeat li{display:grid;grid-template-columns:32px minmax(0,1fr);align-items:start;gap:12px}
 .ufeat i{font-style:normal;display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:var(--brand-wash);color:var(--brand)}
 .ufeat i svg{width:18px;height:18px;stroke-width:2.4}
 .ufeat div{display:grid;gap:1px;padding-top:1px}
 .ufeat b{font-size:15px;font-weight:700;line-height:1.4}
-.ufeat span{font-size:13px;line-height:1.55;color:var(--ink-2)}
+.ufeat span{font-size:12.5px;line-height:1.5;color:var(--ink-2)}
 /* 値段：大きく。含まれるものを札で */
-.uprice{display:grid;gap:10px;padding:14px 16px;border:1.5px solid var(--brand-wash);border-radius:16px}
+.uprice{display:grid;gap:8px;padding:10px 14px;border:1.5px solid var(--brand-wash);border-radius:16px}
 .uprice p{margin:0;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px}
-.uprice p b{font-size:28px;font-weight:700;line-height:1.1;letter-spacing:-.01em;color:var(--ink)}
+.uprice p b{font-size:26px;font-weight:700;line-height:1.1;letter-spacing:-.01em;color:var(--ink)}
 .uprice p span{font-size:13px;font-weight:700;color:var(--brand)}
 .uprice ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
 .uprice li{display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 10px;border-radius:13px;background:var(--surface-2);font-size:12px;font-weight:700;color:var(--ink-2)}
 .uprice li svg{width:13px;height:13px;color:var(--brand);stroke-width:2.8}
 .uprice li.cur{background:var(--brand-wash);color:var(--brand)}
-.prosheet .btn.big{height:54px;font-size:17px}
+.prosheet .btn.big{height:52px;font-size:17px}
 .prosheet .bnote{margin-top:-6px}
 .prosheet .blink{margin-top:-6px}
 .arow{display:grid;gap:2px;width:100%;padding:14px 16px;border:0;border-radius:14px;background:var(--surface-2);text-align:left}

@@ -10,8 +10,8 @@
       "internalID" : "6740000001",
       "localizations" : [
         {
-          "description" : "タイマーとお気に入りが使え、広告も出なくなります。",
-          "displayName" : "有料プラン",
+          "description" : "タイマーとお気に入りが使え、広告が出なくなります。",
+          "displayName" : "プレミアム",
           "locale" : "ja"
         }
       ],
