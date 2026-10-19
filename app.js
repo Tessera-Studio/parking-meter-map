@@ -6,8 +6,7 @@ const LIST_MAX = 40;   // カードに出す件数
 const NEAR_M = 1000;   // カードに出す範囲（起点から区間の線まで）
 const SMALL_ZOOM = 14;  // これより引いた地図では、線を細くする
 const DETAIL_ZOOM = 17; // ここまで寄ったら、全区間に小さいPマークを出す（それまでは選んだ区間だけ）
-const WALK_M_MIN = 80; // 徒歩1分の距離
-const DEST_R = 400;    // 行き先のまわりに描く円（徒歩5分）
+const DEST_R = 400;    // 行き先のまわりに描く円（半径400m）
 const CAR_KMH = 20;    // 「ここへ行く」の所要時間の目安（直線距離×1.4 をこの速さで）
 
 // 地図の下地は basemap.js のベクトル地図（ふだんは「シンプル」、切り替えで「詳しい」）。
@@ -84,7 +83,6 @@ const vehicles = z => (z.truckOnly ? '貨物車専用'
   : [z.car && '普通車', z.truck && '貨物', z.bike && '二輪'].filter(Boolean).join('・') || '—');
 const prefName = p => ({ 北海道: '札幌' }[p] || p.replace(/[都府県]$/, ''));
 const fmtDist = m => (m < 1000 ? `${Math.round(m / 10) * 10}m` : `${(m / 1000).toFixed(1)}km`);
-const walkMin = m => Math.max(1, Math.ceil(m / WALK_M_MIN));
 const fmtMin = m => (m >= 60 ? `${Math.floor(m / 60)}時間${m % 60 ? `${m % 60}分` : ''}` : `${m}分`);
 
 // きょう／あす／◯曜（いまの日付から見て）
@@ -273,7 +271,6 @@ function meters(a, b) {
 const nearest = (z, o) => Math.min(...z.lines.flat().map(p => meters(o, p)));
 // 距離を測る起点：行き先があれば行き先、なければ見えている地図の中心
 const origin = () => (state.dest ? [state.dest.lat, state.dest.lng] : visibleCenter());
-const distText = d => (state.dest ? `${state.dest.name}まで 徒歩${walkMin(d)}分` : `徒歩 ${walkMin(d)}分`);
 
 // 起点から1km以内の区間。緑を近い順、その後にグレーを近い順。extra は一覧の外でも入れる区間（地図で押したとき）
 function computeRows(extra) {
@@ -481,8 +478,6 @@ function sourceLabel(z) {
 function renderDetail(z) {
   const t = when();
   const [lat, lng] = z.center;
-  const r = state.rows.find(x => x.z.id === z.id);
-  const d = r ? r.d : nearest(z, origin());
   const row = (k, v) => (v ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : '');
   const [srcTag, srcText, srcLink, srcUrl] = sourceLabel(z);
   const more = [
@@ -497,7 +492,7 @@ function renderDetail(z) {
     <div class="dhead">
       <button class="dclose" type="button" data-close aria-label="閉じる">${svg('<path d="M6 6l12 12M18 6L6 18"/>')}</button>
       <p class="dkick">${esc(kicker(z))}</p>
-      <div class="dtitle"><h2 id="dtitle">${esc(zoneName(z))}</h2>${Pro.starBtn(z.id, 'dstar')}<span>${esc(distText(d))}</span></div>
+      <div class="dtitle"><h2 id="dtitle">${esc(zoneName(z))}</h2>${Pro.starBtn(z.id, 'dstar')}</div>
     </div>
     <div class="dfacts">
       <div>${I.clock}<b>${esc(z.span ? z.hours : '現地で確認')}</b><span>利用時間</span></div>
@@ -925,9 +920,9 @@ function drawDest() {
   if (!d) return;
   const ink = colors().ink;
   L.circle([d.lat, d.lng], { radius: DEST_R, color: ink, weight: 2, opacity: .7, dashArray: '6 8', fill: true, fillColor: ink, fillOpacity: .04, interactive: false }).addTo(marks);
-  // 円の上に「徒歩5分」
+  // 円の上に「半径400m」（直線の距離なので、徒歩の時間では書かない）
   L.marker([d.lat + DEST_R / 111320, d.lng], {
-    icon: L.divIcon({ className: 'pm', html: `<span class="rtag">徒歩${walkMin(DEST_R)}分</span>`, iconSize: [0, 0] }),
+    icon: L.divIcon({ className: 'pm', html: `<span class="rtag">半径${DEST_R}m</span>`, iconSize: [0, 0] }),
     interactive: false, keyboard: false, zIndexOffset: 5800,
   }).addTo(marks);
   L.marker([d.lat, d.lng], {
