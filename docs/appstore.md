@@ -54,7 +54,7 @@ App Store Connect に入れる文章・申告・画像の下書きです。法�
 ■ 地図アプリで案内
 「ここへ行く」から、Apple マップ・Google マップで経路を開けます。
 
-■ 有料プラン（500円・買い切り）
+■ プレミアム（500円・買い切り）
 ・タイマー：停めた時刻から最大時間までの残りを数え、終わる10分前と時間になったときに通知します。車の場所にもすぐ戻れます。
 ・お気に入り：よく使う区間と行き先を保存できます。
 ・広告が出なくなります。
@@ -83,13 +83,13 @@ App Store Connect に入れる文章・申告・画像の下書きです。法�
 
 | 項目 | 入れる内容 |
 |---|---|
-| 参照名 | 有料プラン |
+| 参照名 | プレミアム |
 | 製品 ID | `jp.tesseras.parkingmetermap.pro` |
 | 種類 | 非消耗型 |
 | 価格 | 500円 |
-| 表示名（30文字まで） | 有料プラン |
+| 表示名（30文字まで） | プレミアム |
 | 説明（45文字まで） | タイマーとお気に入りが使え、広告が出なくなります |
-| 審査用のスクリーンショット | 有料プランのシート（タイマーかお気に入りを押したときの画面）を1枚 |
+| 審査用のスクリーンショット | プレミアムのシート（タイマーかお気に入りを押したときの画面）を1枚 |
 | 審査メモ | 地図の右下のタイマーかお気に入り（★）を押すと、購入のシートが出ます。 |
 
 - ファミリー共有：オフ（`Products.storekit` と同じ）。
@@ -106,7 +106,7 @@ MeterMap shows on-street parking meter / parking ticket zones in Tokyo, Osaka, K
 
 How to review:
 - The map opens at the current location. If the device is outside Japan, search "Ginza" in the search field to see zones.
-- In-app purchase (non-consumable, "有料プラン"): tap the timer button or the star button at the bottom right. The sheet shows the purchase button and "Restore purchases".
+- In-app purchase (non-consumable, "プレミアム"): tap the timer button or the star button at the bottom right. The sheet shows the purchase button and "Restore purchases".
 - Location is used only on the device to show nearby zones. Notifications are used only for the parking timer (10 minutes before and at the end).
 - App Tracking Transparency is requested once, just before the first banner ad is shown (free users only; the banner is at the bottom of the screen).
 
@@ -151,7 +151,7 @@ The zone data is created by us from public information released by each prefectu
 2. シミュレーターの現在地を銀座にする（Features → Location → Custom Location…、緯度 35.6717・経度 139.7650）。
 3. 時刻は平日の昼に撮る（緑の区間が多く見える）。
 4. 撮りたい画面を出して、**⌘S**（File → Save Screen）。デスクトップに 1320 × 2868 の PNG ができる。
-5. 有料プランの画面は、Xcode の StoreKit で購入した状態で撮る。広告が写らないように、有料プランの状態で撮るのがよい（広告はテスト表示になるため）。
+5. プレミアムの画面は、Xcode の StoreKit で購入した状態で撮る。広告が写らないように、プレミアムの状態で撮るのがよい（広告はテスト表示になるため）。
 
 **構成案**（上に入れるひとことは、あとで画像に重ねる）：
 
@@ -160,8 +160,8 @@ The zone data is created by us from public information released by each prefectu
 | 1 | メイン：地図とカード（緑の区間が多いところ） | いま使える路上パーキングが、地図でひと目で |
 | 2 | 詳細：利用時間・最大時間・料金・利用できる時間 | 利用時間・最大時間・料金を、すぐ確認 |
 | 3 | 検索：駅名で探して、近い順のカード | 行き先の近くを、近い順に |
-| 4 | タイマー：動いている円と残り時間 | 残り時間を数えて、10分前に通知（有料プラン） |
-| 5 | お気に入りの一覧 | よく使う区間を保存（有料プラン） |
+| 4 | タイマー：動いている円と残り時間 | 残り時間を数えて、10分前に通知（プレミアム） |
+| 5 | お気に入りの一覧 | よく使う区間を保存（プレミアム） |
 | 6 | 「ここへ行く」のシート | Apple マップ・Google マップですぐ案内 |
 
 撮った PNG を送ってもらえれば、ひとことを重ねた App Store 用の画像に仕上げる。
