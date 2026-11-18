@@ -24,7 +24,7 @@ android/                Android Studio のプロジェクト
 
 ## iPhone のシミュレーターで動かす（Mac）
 
-用意するもの：Mac、**Xcode 26 以上**（App Store から。2026年4月28日から、App Store Connect へのアップロードは Xcode 26 以上が必須）、**Node.js 22**（https://nodejs.org/）。
+用意するもの：Mac、**Xcode 26 以上**（App Store から。2026年4月28日から、App Store Connect へのアップロードは Xcode 26 以上が必須。**2027年4月からは Xcode 27（iOS 27 SDK）以上が必須**になる。App Store Connect から ITMS-90725 の予告が届いている）、**Node.js 22**（https://nodejs.org/）。
 
 ```sh
 git clone https://github.com/Tessera-Studio/parking-meter-map.git

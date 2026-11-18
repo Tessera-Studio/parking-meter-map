@@ -112,6 +112,7 @@ How to review:
 - In-app purchase (non-consumable, "プレミアム"): tap the timer button or the star button at the bottom right. The sheet shows the purchase button and "Restore purchases".
 - Location is used only on the device to show nearby zones. Notifications are used only for the parking timer (10 minutes before and at the end).
 - App Tracking Transparency is requested once, just before the first banner ad is shown (free users only; the banner is at the bottom of the screen).
+- Banner ads may not appear during review because our AdMob account is still pending approval; the App Tracking Transparency prompt is still shown before the first ad request.
 
 The zone data is created by us from public information released by each prefectural police; it is not provided by the police.
 ```
@@ -175,18 +176,35 @@ The zone data is created by us from public information released by each prefectu
 
 ## 9. 申請の前に残っていること
 
-- [x] 法人情報の変更（Apple Developer Program）の完了
-- [x] App Store Connect に「有料アプリ契約」・銀行口座・税の情報
+- [ ] 法人情報の変更（Apple Developer Program）：いまの登録タイプは「個人」。個人から組織への切り替えを2026年11月18日に申請済みで、Apple の返事待ち（§10）
+- [x] App Store Connect に「有料アプリ契約」・銀行口座・税の情報（いまは個人名義。切り替えのあと会社名義で入れ直す。§10）
 - [x] App のプライバシーを App Store Connect で公開（§5）
 - [x] `SKAdNetworkItems` を Google の一覧（50件）にした
 - [x] アプリ内のプライバシーポリシー・サポートのリンクを tesseras.jp にした（`config.js`）
 - [x] 本番の AdMob の ID（`Info.plist` の `GADApplicationIdentifier`・`config.js` の `admobBannerId`、`admobTesting: false`）（docs/pro-ads.md §23 の 6）
 - [x] `https://tesseras.jp/app-ads.txt` を置いた（Tessera-Studio/tesseras-site）
-- [ ] 手元の iPhone を AdMob の「テストデバイス」に登録する（本番の広告を自分で押さないため）
+- [ ] AdMob のアカウントの承認：2026年11月18日の時点で審査中。それまでは「Account not approved yet」で広告が届かない（バナーの枠はアプリが自動で閉じる）
+- [x] 手元の iPhone を AdMob の「テストデバイス」に登録した（Xcode の記録に「Ad inspector enabled」が出て、テストデバイスとして認識されていることを確かめた）
 - [x] tesseras.jp のプライバシーポリシーの所在地・制定日（Tessera-Studio/tesseras-site）
 - [ ] 審査の連絡先の電話番号（App Store Connect で必須。公開はされない）
 - [x] プライバシーポリシーに所在地を書き足した
 - [ ] Sandbox の Apple ID で、実機で購入・復元を試す
-- [ ] `npm ci` → `npm run sync` のあと、Xcode 26 以上の Product → Archive → Distribute App で App Store Connect にアップロード
+- [x] `npm ci` → `npm run sync` のあと、Product → Archive → Distribute App で App Store Connect にアップロードした（2026年11月18日、1.0（ビルド 1）、Xcode 26.6・iOS 26.5 SDK）
+  - 届いた警告 ITMS-90725：2027年4月からは iOS 27 SDK（Xcode 27 以上）でビルドしたものしかアップロード・提出できない。今回のビルドはそのまま審査に出せる
+- [ ] 審査に提出する：ビルドを選ぶ、App 内課金「プレミアム」を追加、審査の情報（§4）、**「手動でリリース」**にする
 - [ ] 公開後：AdMob の管理画面の「アプリストアの詳細」で App Store のアプリとひもづける（AdMob が app-ads.txt を確かめてアプリを承認する）
 - [ ] Web 版（`index.html` の地図）をやめる：`privacy.html`・`support.html` だけを残す
+
+## 10. 公開までの流れ（法人への切り替え待ち）
+
+いまの Apple Developer Program の登録タイプは「個人」（チーム ID `RS34B9UDRU`）。このまま公開すると、App Store の販売元は個人名になり、売上も個人名義の口座に入る。プライバシーポリシー・サポート・特商法の表記は「合同会社Tessera Studio」なので、**切り替えが終わってから公開する**。
+
+1. **審査には先に出す**：リリースの方法を「手動でリリース」にして提出する。承認されると「デベロッパによるリリース待ち」で止まる。
+2. **切り替えが終わったら（Apple から連絡が来たら）**
+   - developer.apple.com の「メンバーシップの詳細」で、登録タイプが「組織」、名前が会社名になったことを確かめる。チーム ID は変わらない（アップロードしたビルドや App Store Connect の設定はそのまま）。
+   - App Store Connect の「ビジネス」で、有料アプリ契約・銀行口座・税の情報（W-8BEN-E）を会社名義で入れ直す。新しい契約への同意を求められたら同意する。
+   - AdMob の支払いプロファイルも会社名義にそろえる。
+3. **公開する**：バージョン 1.0 のページで「このバージョンをリリース」を押す。
+4. **公開のあと**：AdMob の「アプリストアの詳細」で App Store のアプリとひもづける（§9）。
+
+次のアップデートは、2027年4月より前に Xcode 27 以上に替えてからビルドする（ITMS-90725）。
