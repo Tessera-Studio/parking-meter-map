@@ -17,13 +17,16 @@ App Store Connect に入れる文章・申告・画像の下書きです。法�
 | カテゴリ | プライマリ：**ナビゲーション**／セカンダリ：**ユーティリティ** |
 | 価格 | 無料（App 内課金あり） |
 | 対応機種 | iPhone だけ（縦向きだけ）。iPad の画面は作らない |
-| 著作権 | © 2026 Tessera Studio LLC |
-| サポート URL | https://hodakamiwako-art.github.io/parking-meter-map/support.html |
-| プライバシーポリシー URL | https://hodakamiwako-art.github.io/parking-meter-map/privacy.html |
-| マーケティング URL | （なし） |
+| 著作権 | 2026 Tessera Studio LLC（「©」は App Store が付けるので入れない） |
+| コンテンツ配信権 | 第三者のコンテンツを含み、必要な権利を持っている（警視庁オープンデータ CC BY 4.0、OpenStreetMap ODbL、国土地理院） |
+| 配信国 | **日本だけ**（データが日本の5都市だけ。EU・英国で広告を出すのに要る同意画面（Google の UMP）を入れていない。EU の DSA のトレーダー申告も要らなくなる） |
+| サポート URL | https://tesseras.jp/metermap/ |
+| プライバシーポリシー URL | https://tesseras.jp/metermap/privacy |
+| マーケティング URL | https://tesseras.jp/metermap/（AdMob の `app-ads.txt` を `https://tesseras.jp/app-ads.txt` に置くため、開発者サイトを tesseras.jp にしておく） |
 
 - 名前は、ホーム画面の「メーターマップ」とそろえる。起動画面の英語表記は「MeterMap」。
-- サポートとプライバシーポリシーのページは、このリポジトリの一番上の `support.html`・`privacy.html`（GitHub Pages で公開）。Web 版をやめるときも、この2つのページは残す。
+- サポートとプライバシーポリシーのページは、会社サイト（リポジトリ Tessera-Studio/tesseras-site の `metermap/`）で公開する。リポジトリを Tessera-Studio に移したので、旧 URL（hodakamiwako-art.github.io）は使わない（GitHub Pages は移管後に転送されない）。
+- アプリの「？」のメニューのリンクも同じ URL（`config.js` の `privacyUrl`・`supportUrl`）。このリポジトリの `support.html`・`privacy.html` は文面の元として残す。
 
 ## 2. 説明文
 
@@ -74,7 +77,7 @@ App Store Connect に入れる文章・申告・画像の下書きです。法�
 ### キーワード（100文字まで。カンマ区切り・空白なし。名前とカテゴリの語は入れない）
 
 ```
-パーキングメーター,パーキングチケット,路上駐車,駐車場,コインパーキング,時間制限駐車,駐車,タイマー,東京,大阪
+パーキングメーター,パーキングチケット,路上駐車,駐車場,コインパーキング,時間制限駐車,駐車,タイマー,東京,大阪,横浜,神奈川,京都,札幌
 ```
 
 ### 新機能（最初のバージョンでは入れない）
@@ -121,10 +124,14 @@ The zone data is created by us from public information released by each prefectu
 
 | データの種類 | 集めるもの | 使いみち | ユーザに紐づくか | トラッキングに使うか |
 |---|---|---|---|---|
-| 位置情報 | おおよその位置（IP アドレスから） | サードパーティ広告、分析 | いいえ | いいえ |
-| ID | デバイス ID（広告の識別子。トラッキングの許可があったときだけ） | サードパーティ広告 | いいえ | **はい** |
-| 使用状況データ | 製品の操作、広告データ | サードパーティ広告、分析 | いいえ | **はい**（広告データ） |
+| 位置情報 | おおよその位置（IP アドレスから） | サードパーティ広告、分析 | いいえ | **はい** |
+| ID | デバイス ID（広告の識別子。トラッキングの許可があったときだけ） | サードパーティ広告、分析 | いいえ | **はい** |
+| 使用状況データ | 製品の操作、広告データ | サードパーティ広告、分析 | いいえ | **はい**（どちらも） |
 | 診断 | クラッシュデータ、パフォーマンスデータ、その他の診断データ | 分析 | いいえ | いいえ |
+
+- この表の内容で、2026年11月18日に App Store Connect の「App のプライバシー」を公開した。
+- トラッキングは安全側で申告している（アプリはトラッキングの許可（ATT）を求めていて、広告 SDK はこれらを広告のターゲティングに使いうるため）。少なく申告すると審査で指摘されうるが、多く申告してもストアの表示が変わるだけ。
+- 「ユーザに紐づく」はすべて「いいえ」（アカウントがなく、個人と結びつける仕組みがない）。
 
 申告しないもの（理由）：
 - **正確な位置情報**：現在地は端末の中だけで使い、どこにも送らない（「収集」に当たらない）。
@@ -168,10 +175,16 @@ The zone data is created by us from public information released by each prefectu
 
 ## 9. 申請の前に残っていること
 
-- [ ] 法人情報の変更（Apple Developer Program）の完了
-- [ ] App Store Connect に「有料アプリ契約」・銀行口座・税の情報
-- [ ] 本番の AdMob の ID（`Info.plist` の `GADApplicationIdentifier`・`config.js` の `admobBannerId`、`admobTesting: false`）と `SKAdNetworkItems` の一覧（docs/pro-ads.md §23 の 6）
+- [x] 法人情報の変更（Apple Developer Program）の完了
+- [x] App Store Connect に「有料アプリ契約」・銀行口座・税の情報
+- [x] App のプライバシーを App Store Connect で公開（§5）
+- [x] `SKAdNetworkItems` を Google の一覧（50件）にした
+- [x] アプリ内のプライバシーポリシー・サポートのリンクを tesseras.jp にした（`config.js`）
+- [ ] 本番の AdMob の ID（`Info.plist` の `GADApplicationIdentifier`・`config.js` の `admobBannerId`、`admobTesting: false`）（docs/pro-ads.md §23 の 6）。テスト広告のままだと、審査で未完成と見なされうる
+- [ ] tesseras.jp のプライバシーポリシーの所在地・制定日（Tessera-Studio/tesseras-site）
+- [ ] 審査の連絡先の電話番号（App Store Connect で必須。公開はされない）
 - [x] プライバシーポリシーに所在地を書き足した
 - [ ] Sandbox の Apple ID で、実機で購入・復元を試す
-- [ ] Xcode の Product → Archive → Distribute App で App Store Connect にアップロード
+- [ ] `npm ci` → `npm run sync` のあと、Xcode 26 以上の Product → Archive → Distribute App で App Store Connect にアップロード
+- [ ] 公開後：AdMob の管理画面で App Store のアプリとひもづけ、`https://tesseras.jp/app-ads.txt` を置く
 - [ ] Web 版（`index.html` の地図）をやめる：`privacy.html`・`support.html` だけを残す
