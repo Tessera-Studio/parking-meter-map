@@ -1,32 +1,26 @@
 """MeterMap App Store creative: 5 designed screenshots (1320x2868), product page header (3840x1646),
 search results asset (3840x2560). All RGB PNG (no alpha).
 
-usage: python3 make_store_assets.py <shots_dir> <zones.geojson> <font_dir> <out_dir>
+usage: python3 make_store_assets.py <shots_dir> <font_dir> <out_dir>
 """
-import hashlib
-import json
-import math
 import sys
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-SHOTS, ZONES, FONTS, OUT = (Path(a) for a in sys.argv[1:5])
+SHOTS, FONTS, OUT = (Path(a) for a in sys.argv[1:4])
 OUT.mkdir(parents=True, exist_ok=True)
 F_BLACK = str(FONTS / 'NotoSansCJK-Black.ttc')
 F_BOLD = '/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc'
 
-# colours (app: splash #006BF4, theme navy #1E4E8C, zone green / red / selected yellow)
+# colours (app: splash #006BF4, zone green / red, highlight yellow)
 BLUE_T, BLUE_B = (0x10, 0x7A, 0xFF), (0x00, 0x56, 0xD6)
 WHITE = (255, 255, 255)
 YELLOW = (0xFF, 0xD2, 0x3F)
 NAVY = (0x12, 0x2B, 0x52)
-BRAND_NAVY = (0x1E, 0x4E, 0x8C)
 GREEN = (0x1F, 0x7E, 0x4E)
 RED = (0xD5, 0x45, 0x3B)
-SEL = (0xF2, 0xB4, 0x00)
 GRAY = (0x9A, 0x9E, 0xA6)
-MAPBG = (0xEE, 0xED, 0xE8)
 
 
 def font(path, size):
@@ -189,87 +183,27 @@ for s in SLIDES:
     print(s['out'], out.size, 'phone top', top, 'bleed', top + ph.height - H)
 
 
-# ---------------------------------------------------------------- map background from real zones
-zones = json.load(open(ZONES, encoding='utf-8'))['features']
-
-
-def lines_of(f):
-    g = f['geometry']
-    return [g['coordinates']] if g['type'] == 'LineString' else g['coordinates']
-
-
-def zone_colour(f):
-    h = int(hashlib.md5(str(f['properties'].get('識別id')).encode()).hexdigest(), 16) % 100
-    return RED if h < 13 else GREEN
-
-
-def map_art(w, h, lat0, lng0, span_m, ss=2, sel_at=None, pins=()):
-    """Draw zone lines around (lat0, lng0); span_m = metres across the width."""
-    W2, H2 = w * ss, h * ss
-    ppm = W2 / span_m
-    my = 111320 * ppm
-    mx = my * math.cos(math.radians(lat0))
-    img = Image.new('RGB', (W2, H2), MAPBG)
-    d = ImageDraw.Draw(img)
-
-    def P(p):
-        return ((p[0] - lng0) * mx + W2 / 2, (lat0 - p[1]) * my + H2 / 2)
-
-    segs = []
-    for f in zones:
-        for ln in lines_of(f):
-            pts = [P(p) for p in ln]
-            if all(x < -200 or x > W2 + 200 for x, _ in pts) or all(y < -200 or y > H2 + 200 for _, y in pts):
-                continue
-            segs.append((f, pts))
-    road, zw = round(30 * ss), round(13 * ss)
-    for _, pts in segs:
-        d.line(pts, fill=WHITE, width=road, joint='curve')
-    for f, pts in segs:
-        d.line(pts, fill=zone_colour(f), width=zw, joint='curve')
-    chosen = None
-    if sel_at:
-        tx, ty = sel_at[0] * ss, sel_at[1] * ss
-        chosen = min(segs, key=lambda fp: min(math.hypot(x - tx, y - ty) for x, y in fp[1]))
-        d.line(chosen[1], fill=(0x22, 0x22, 0x22), width=zw + 10 * ss, joint='curve')
-        d.line(chosen[1], fill=SEL, width=zw + 2 * ss, joint='curve')
-    img = img.resize((w, h), Image.LANCZOS).convert('RGBA')
-    pin_targets = list(pins) + ([None] if chosen else [])
-    pf = font(F_BLACK, 40)
-    for t in pin_targets:
-        if t is None:
-            pts = chosen[1]
-        else:
-            tx, ty = t[0] * ss, t[1] * ss
-            pts = min(segs, key=lambda fp: min(math.hypot(x - tx, y - ty) for x, y in fp[1]))[1]
-        mid = pts[len(pts) // 2]
-        x, y = mid[0] / ss, mid[1] / ss
-        pd = ImageDraw.Draw(img)
-        pd.rounded_rectangle([x - 34, y - 78, x + 34, y - 10], 14, fill=WHITE)
-        pd.rounded_rectangle([x - 28, y - 72, x + 28, y - 16], 10, fill=GREEN)
-        pd.polygon([(x - 10, y - 12), (x + 10, y - 12), (x, y)], fill=WHITE)
-        pd.text((x, y - 43), 'P', font=pf, fill=WHITE, anchor='mm')
-    return img
-
-
-def soften(img, box, strength=0.86, feather=260):
-    """Fade the map toward the background colour inside box (x0,y0,x1,y1) so text reads."""
-    m = Image.new('L', img.size, 0)
-    ImageDraw.Draw(m).rounded_rectangle(box, 120, fill=int(255 * strength))
-    m = m.filter(ImageFilter.GaussianBlur(feather))
-    veil = Image.new('RGBA', img.size, MAPBG + (255,))
-    veil.putalpha(m)
-    img.alpha_composite(veil)
+# ---------------------------------------------------------------- shared: blue background with faint "P" signs
+def blue_canvas(w, h, signs):
+    """Same blue gradient as the screenshots, with faint parking-sign outlines at (x, y, size)."""
+    c = vgrad(w, h, BLUE_T, BLUE_B).convert('RGBA')
+    deco = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    dd = ImageDraw.Draw(deco)
+    for x, y, size in signs:
+        dd.rounded_rectangle([x, y, x + size, y + size], size * 0.17, outline=(255, 255, 255, 34), width=round(size * 0.037))
+        dd.text((x + size / 2, y + size / 2 + size * 0.03), 'P', font=font(F_BLACK, round(size * 0.8)),
+                fill=(255, 255, 255, 30), anchor='mm')
+    c.alpha_composite(deco)
+    return c
 
 
 # ---------------------------------------------------------------- 2) product page header 3840x1646
 HW, HH = 3840, 1646
 SAFE_H = (1097, 493, 1097 + 1646, 493 + 661)
-hdr = map_art(HW, HH, 35.6970, 139.7710, 5200, sel_at=(3150, 520), pins=[(650, 1200), (3350, 1250)])
-soften(hdr, (SAFE_H[0] - 120, SAFE_H[1] - 80, SAFE_H[2] + 120, SAFE_H[3] + 60))
+hdr = blue_canvas(HW, HH, [(130, 330, 900), (2810, 330, 900)])   # signs stay outside the safe area
 d = ImageDraw.Draw(hdr)
-l1 = [('いま使える', font(F_BLACK, 132), GREEN), ('路上パーキングが', font(F_BLACK, 112), NAVY)]
-l2 = [('ひと目でわかる', font(F_BLACK, 168), NAVY)]
+l1 = [('いま使える', font(F_BLACK, 132), YELLOW), ('路上パーキングが', font(F_BLACK, 112), WHITE)]
+l2 = [('ひと目でわかる', font(F_BLACK, 168), WHITE)]
 sw_ = SAFE_H[2] - SAFE_H[0]
 h1 = round(132 * 1.16); h2 = round(168 * 1.16)
 y0 = SAFE_H[1] + (661 - (h1 + h2 + 10)) / 2
@@ -282,12 +216,11 @@ print('header', hdr.size, 'text widths', round(w1), round(w2), 'safe w', sw_)
 # ---------------------------------------------------------------- 3) search results 3840x2560
 SW_, SH_ = 3840, 2560
 SAFE_S = (836, 765, 836 + 2168, 765 + 1030)
-srch = map_art(SW_, SH_, 35.6712, 139.7655, 3600, sel_at=(600, 500), pins=[(3400, 2200)])
-soften(srch, (SAFE_S[0] - 100, SAFE_S[1] - 60, SAFE_S[0] + 1250, SAFE_S[3] + 60), strength=0.9)
+srch = blue_canvas(SW_, SH_, [(-220, 1650, 1100), (2900, 120, 1100)])
 d = ImageDraw.Draw(srch)
-lines = [[('いま使える', font(F_BLACK, 204), GREEN)],
-         [('路上パーキングが', font(F_BLACK, 140), NAVY)],
-         [('ひと目で', font(F_BLACK, 204), NAVY), ('わかる', font(F_BLACK, 140), NAVY)]]
+lines = [[('いま使える', font(F_BLACK, 204), YELLOW)],
+         [('路上パーキングが', font(F_BLACK, 140), WHITE)],
+         [('ひと目で', font(F_BLACK, 204), WHITE), ('わかる', font(F_BLACK, 140), WHITE)]]
 heights = [round(204 * 1.16), round(140 * 1.16), round(204 * 1.16)]
 y = SAFE_S[1] + (1030 - sum(heights)) / 2
 for runs in lines:
