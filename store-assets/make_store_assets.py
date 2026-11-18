@@ -1,4 +1,4 @@
-"""MeterMap App Store creative: 5 designed screenshots (1320x2868), product page header (3840x1646),
+"""MeterMap App Store creative: 6 designed screenshots (1320x2868 and 1206x2622 in iphone-6.3/), product page header (3840x1646),
 search results asset (3840x2560). All RGB PNG (no alpha).
 
 usage: python3 make_store_assets.py <shots_dir> <font_dir> <out_dir>
@@ -137,14 +137,18 @@ SLIDES = [
          lines=[[('目的地', BIG, YELLOW), ('から', SMALL, WHITE)],
                 [('探せる', BIG, WHITE)]],
          tag='駅名・地名で、近い順に表示'),
-    dict(src='14.webp', out='04_タイマー.png', angle=7, badge='プレミアム',
-         lines=[[('残り時間', BIG, YELLOW), ('を', SMALL, WHITE)],
-                [('通知', BIG, WHITE), ('でお知らせ', SMALL, WHITE)]],
-         tag='終わる10分前と、時間になったとき'),
-    dict(src='15.webp', out='05_すぐ案内.png', angle=-8,
+    dict(src='15.webp', out='04_すぐ案内.png', angle=7,
          lines=[[('行き方', BIG, YELLOW), ('も', SMALL, WHITE)],
                 [('すぐ案内', BIG, WHITE)]],
          tag='地図アプリで、そのまま経路へ'),
+    dict(src='14.webp', out='05_タイマー.png', angle=-8, badge='プレミアム',
+         lines=[[('残り時間', BIG, YELLOW), ('を', SMALL, WHITE)],
+                [('通知', BIG, WHITE), ('でお知らせ', SMALL, WHITE)]],
+         tag='終わる10分前と、時間になったとき'),
+    dict(src='16.webp', out='06_お気に入り.png', angle=7, badge='プレミアム',
+         lines=[[('よく行く先', BIG, YELLOW), ('は', SMALL, WHITE)],
+                [('お気に入り', BIG, WHITE), ('登録', SMALL, WHITE)]],
+         tag='いま使えるかも、一覧でわかる'),
 ]
 
 for s in SLIDES:
@@ -180,6 +184,9 @@ for s in SLIDES:
     out = c.convert('RGB')
     assert out.size == (W, H)
     out.save(OUT / s['out'], 'PNG', optimize=True)
+    # App Store Connect の基準の iPhone は「中型ディスプレイ」（6.3インチ 1206x2622）。縦横比の差は 0.07% なので縮小で作る
+    (OUT / 'iphone-6.3').mkdir(exist_ok=True)
+    out.resize((1206, 2622), Image.LANCZOS).save(OUT / 'iphone-6.3' / s['out'], 'PNG', optimize=True)
     print(s['out'], out.size, 'phone top', top, 'bleed', top + ph.height - H)
 
 
