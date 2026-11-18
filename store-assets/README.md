@@ -4,8 +4,8 @@ App Store Connect に入れる画像です。2026年11月18日に作りました
 
 | ファイル | 使う場所 | 大きさ |
 |---|---|---|
-| `iphone-6.3/01_いま使える.png` 〜 `05_すぐ案内.png` | **スクリーンショット（App Store Connect の「Dynamic Island搭載iPhone（中型ディスプレイ）」に入れる。この順に並べる）** | 1206 × 2622 |
-| `01_いま使える.png` 〜 `05_すぐ案内.png` | 同じスクリーンショットの 6.9インチ版（大型ディスプレイの欄が出たとき用） | 1320 × 2868 |
+| `iphone-6.3/01_いま使える.png` 〜 `06_お気に入り.png` | **スクリーンショット（App Store Connect の「Dynamic Island搭載iPhone（中型ディスプレイ）」に入れる。この順に並べる）** | 1206 × 2622 |
+| `01_いま使える.png` 〜 `06_お気に入り.png` | 同じスクリーンショットの 6.9インチ版（大型ディスプレイの欄が出たとき用） | 1320 × 2868 |
 | `header_3840x1646.png` | プロダクトページのヘッダアセット | 3840 × 1646 |
 | `search_3840x2560.png` | 検索結果アセット | 3840 × 2560 |
 
@@ -15,6 +15,8 @@ App Store Connect に入れる画像です。2026年11月18日に作りました
 - ヘッダと検索結果の文字は、Apple の決めた「必ず表示される範囲」に入れています。ヘッダは 1646 × 661（x 1097, y 493）、検索結果は 2168 × 1030（x 836, y 765）です（[Creative assets specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/creative-assets-specifications/)）。
 - 背景は、どれもスクリーンショットと同じ青（起動画面の色に近い青のグラデーション）に、駐車場の標識の「P」を薄く重ねています。
 - 価格・URL・ほかのサービスのロゴ・裏付けのない表現（「No.1」など）は入れません（[App Store Asset Best Practices](https://developer.apple.com/app-store/asset-best-practices/)）。
+
+並び順：01 いま使える → 02 時間も料金も → 03 目的地から → 04 すぐ案内 → 05 タイマー（プレミアム） → 06 お気に入り（プレミアム）。無料で使える機能を先に、プレミアムの機能を最後に並べています。
 
 ## 作り直し方
 
