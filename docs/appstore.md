@@ -180,11 +180,13 @@ The zone data is created by us from public information released by each prefectu
 - [x] App のプライバシーを App Store Connect で公開（§5）
 - [x] `SKAdNetworkItems` を Google の一覧（50件）にした
 - [x] アプリ内のプライバシーポリシー・サポートのリンクを tesseras.jp にした（`config.js`）
-- [ ] 本番の AdMob の ID（`Info.plist` の `GADApplicationIdentifier`・`config.js` の `admobBannerId`、`admobTesting: false`）（docs/pro-ads.md §23 の 6）。テスト広告のままだと、審査で未完成と見なされうる
-- [ ] tesseras.jp のプライバシーポリシーの所在地・制定日（Tessera-Studio/tesseras-site）
+- [x] 本番の AdMob の ID（`Info.plist` の `GADApplicationIdentifier`・`config.js` の `admobBannerId`、`admobTesting: false`）（docs/pro-ads.md §23 の 6）
+- [x] `https://tesseras.jp/app-ads.txt` を置いた（Tessera-Studio/tesseras-site）
+- [ ] 手元の iPhone を AdMob の「テストデバイス」に登録する（本番の広告を自分で押さないため）
+- [x] tesseras.jp のプライバシーポリシーの所在地・制定日（Tessera-Studio/tesseras-site）
 - [ ] 審査の連絡先の電話番号（App Store Connect で必須。公開はされない）
 - [x] プライバシーポリシーに所在地を書き足した
 - [ ] Sandbox の Apple ID で、実機で購入・復元を試す
 - [ ] `npm ci` → `npm run sync` のあと、Xcode 26 以上の Product → Archive → Distribute App で App Store Connect にアップロード
-- [ ] 公開後：AdMob の管理画面で App Store のアプリとひもづけ、`https://tesseras.jp/app-ads.txt` を置く
+- [ ] 公開後：AdMob の管理画面の「アプリストアの詳細」で App Store のアプリとひもづける（AdMob が app-ads.txt を確かめてアプリを承認する）
 - [ ] Web 版（`index.html` の地図）をやめる：`privacy.html`・`support.html` だけを残す

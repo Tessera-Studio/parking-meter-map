@@ -6,9 +6,9 @@
    legalPublished：特定商取引法の表記のページを公開したら true（シートにリンクを出す）。
    privacyUrl・supportUrl：ヘルプに出すプライバシーポリシーとサポートのページ（App Store Connect にも同じ URL を入れる）。
    adsEnabled：広告（AdMob のバナー）を出す。詳細・タイマーを開いているあいだだけ、画面の一番下に出る。有料プランでは出ない。
-   admobBannerId：AdMob のバナーの広告ユニット ID。いまは Google のテスト用（本番は AdMob の管理画面で作った ID に替える）。
-   admobTesting：テスト広告として出す。本番の ID に替えたら false。
-   ※ AdMob のアプリ ID は ios/App/App/Info.plist の GADApplicationIdentifier（いまはテスト用）。 */
+   admobBannerId：AdMob のバナーの広告ユニット ID（本番。iOS アプリ「メーターマップ」のバナー）。Android は別の ID になる。
+   admobTesting：テスト広告として出す。本番では false。手元の iPhone は AdMob の「テストデバイス」に登録して、本番の広告を押さないようにする。
+   ※ AdMob のアプリ ID は ios/App/App/Info.plist の GADApplicationIdentifier（本番）。 */
 window.PMM_CONFIG = {
   proEnabled: true,
   proShown: true,
@@ -17,6 +17,6 @@ window.PMM_CONFIG = {
   privacyUrl: 'https://tesseras.jp/metermap/privacy',
   supportUrl: 'https://tesseras.jp/metermap/',
   adsEnabled: true,
-  admobBannerId: 'ca-app-pub-3940256099942544/2435281174',
-  admobTesting: true,
+  admobBannerId: 'ca-app-pub-8846614684110251/6527615321',
+  admobTesting: false,
 };

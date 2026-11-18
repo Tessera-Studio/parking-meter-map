@@ -67,7 +67,7 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>現在地の近くのパーキング・メーターを地図に出すために使います。</string>
 	<key>GADApplicationIdentifier</key>
-	<string>ca-app-pub-3940256099942544~1458002511</string>
+	<string>ca-app-pub-8846614684110251~3056495365</string>
 	<key>SKAdNetworkItems</key>
 	<!-- Google の一覧（googleads-mobile-ios-examples の BannerExample の Info.plist、2026-11-16 版。50件） -->
 	<array>
