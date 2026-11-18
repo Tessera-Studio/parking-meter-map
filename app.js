@@ -503,7 +503,8 @@ function renderDetail(z) {
     <div class="dacts"><h3>地図アプリで行き方を見る</h3>${navRows(z, true)}</div>
     <p class="note">${I.info}<span>時間外は、ほとんどの区間で駐車禁止です。現地の標識・メーターの表示が優先されます。</span></p>
     ${more ? `<div class="dmore"><h3>区間の情報</h3><dl>${more}</dl></div>` : ''}
-    <p class="src"><span class="badge off">${esc(srcTag)}</span><span>${esc(srcText)}${srcUrl ? ` <a href="${srcUrl}" target="_blank" rel="noopener">${esc(srcLink)}</a>` : ''}</span></p>`;
+    <p class="src"><span class="badge off">${esc(srcTag)}</span><span>${esc(srcText)}${srcUrl ? ` <a href="${srcUrl}" target="_blank" rel="noopener">${esc(srcLink)}</a>` : ''}</span></p>
+    <button class="zreport" type="button" data-zreport>この区間の情報が違う</button>`;
   Pro.syncAds();
   if (!z.addr && !addrCache.has(z.id)) {
     address(z).then(a => { if (state.detail && state.sel === z.id && a) $('#dtitle').textContent = a; }).catch(() => {});
@@ -1006,6 +1007,7 @@ function bind() {
   });
   $('#dsheet').addEventListener('click', e => {
     if (e.target.closest('[data-close]')) leaveDetail();
+    if (e.target.closest('[data-zreport]')) { const z = byId.get(state.sel); if (z) Pro.openFeedback({ zone: z }); }
     // 詳細の地図アプリの2行：アプリでは地図アプリを直接開く（ブラウザではリンクのまま）
     const nl = e.target.closest('[data-navlink]');
     if (nl && appLauncher) { e.preventDefault(); const z = byId.get(state.sel); if (z) openNav(nl.dataset.navlink, z); }

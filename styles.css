@@ -423,3 +423,21 @@ body.in-detail .top,body.in-detail .cards,body.in-detail .mapctl{display:none}
 .timerbtn.warn{background:var(--no);color:var(--on-no)}
 /* タイマーを開いているあいだ、ほかのボタン・地図を押せないようにする幕 */
 .tscrim{position:fixed;inset:0;z-index:1290;background:rgba(0,0,0,.28)}
+
+/* ---------- ご意見・不具合のフォーム ---------- */
+.fbzone{margin:-4px 0 0;display:grid;gap:2px;padding:10px 14px;border-radius:12px;background:var(--surface-2);font-size:16px;font-weight:700}
+.fbzone small{font-size:12px;font-weight:400;color:var(--muted)}
+.fbkinds{display:flex;flex-wrap:wrap;gap:8px}
+.fbkind{position:relative;cursor:pointer}
+.fbkind input{position:absolute;opacity:0;pointer-events:none}
+.fbkind span{display:inline-flex;align-items:center;height:36px;padding:0 14px;border-radius:18px;background:var(--surface-2);font-size:14px;font-weight:700;color:var(--ink-2)}
+.fbkind input:checked + span{background:var(--brand);color:var(--on-brand)}
+.fbkind input:focus-visible + span{outline:2px solid var(--brand);outline-offset:2px}
+.fblabel{margin:4px 0 -6px;font-size:13px;font-weight:700;color:var(--ink-2)}
+.fbtext,.fbmail{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);padding:10px 12px;font:16px/1.5 var(--f-body);color:var(--ink)}
+.fbtext{resize:vertical;min-height:110px}
+.fbmail{height:46px}
+.fbnote{margin:0;font-size:12px;color:var(--muted)}
+.fbmsg{margin:0;min-height:1.2em;font-size:13px;font-weight:700;color:var(--no)}
+.zreport{justify-self:start;border:0;background:transparent;padding:2px 0;font-size:13px;color:var(--muted);text-decoration:underline}
+

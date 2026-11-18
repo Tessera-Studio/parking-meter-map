@@ -8,6 +8,9 @@
    adsEnabled：広告（AdMob のバナー）を出す。詳細・タイマーを開いているあいだだけ、画面の一番下に出る。有料プランでは出ない。
    admobBannerId：AdMob のバナーの広告ユニット ID（本番。iOS アプリ「メーターマップ」のバナー）。Android は別の ID になる。
    admobTesting：テスト広告として出す。本番では false。手元の iPhone は AdMob の「テストデバイス」に登録して、本番の広告を押さないようにする。
+   feedbackUrl：ご意見・不具合のフォームの送り先（Google スプレッドシートに付けた Apps Script の Web アプリの URL。docs/feedback.md）。
+               空のあいだは、送るボタンでメールアプリを開く（support@tesseras.jp あて）。
+   appVersion：フォームに付けて送るアプリの版（Xcode の MARKETING_VERSION と合わせる）。
    ※ AdMob のアプリ ID は ios/App/App/Info.plist の GADApplicationIdentifier（本番）。 */
 window.PMM_CONFIG = {
   proEnabled: true,
@@ -19,4 +22,6 @@ window.PMM_CONFIG = {
   adsEnabled: true,
   admobBannerId: 'ca-app-pub-8846614684110251/6527615321',
   admobTesting: false,
+  feedbackUrl: '',
+  appVersion: '1.0',
 };
