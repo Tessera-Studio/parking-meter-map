@@ -400,7 +400,7 @@
 
   /* ---------- ご意見・不具合のフォーム（docs/feedback.md） ---------- */
   // 送り先は Google スプレッドシートに付けた Apps Script。送る内容に、アプリの版・端末・プラン（と区間）を自動で付ける。位置情報は送らない
-  const FB_KINDS = [['bug', '不具合'], ['zone', '区間の情報が違う'], ['idea', '要望'], ['other', 'その他']];
+  const FB_KINDS = [['bug', '不具合'], ['zone', '区間情報の訂正'], ['idea', '要望'], ['other', 'その他']];
   const FB_MAX = 1000;
   let fbZone = null;
   // 端末ごとの番号（送りすぎを防ぐためだけに使う。名前やメールとは結びつけない）
@@ -415,7 +415,7 @@
     fbZone = opts.zone || null;
     const kind = fbZone ? 'zone' : 'bug';
     openSheet(`
-      <h2 id="buyTitle">${fbZone ? 'この区間の情報が違う' : 'ご意見・不具合を送る'}</h2>
+      <h2 id="buyTitle">${fbZone ? '区間情報の訂正' : 'ご意見・不具合を送る'}</h2>
       ${fbZone ? `<p class="fbzone">${esc(zoneName(fbZone))}<small>${esc(fbZone.pref || '')}・区間番号 ${esc(fbZone.id)}</small></p>` : ''}
       <div class="fbkinds" role="radiogroup" aria-label="種類">${FB_KINDS.map(([k, t]) => `<label class="fbkind"><input type="radio" name="fbkind" value="${k}"${k === kind ? ' checked' : ''}><span>${t}</span></label>`).join('')}</div>
       <label class="fblabel" for="fbText">内容</label>
