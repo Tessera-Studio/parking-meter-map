@@ -48,8 +48,8 @@ function doPost(e) {
 
     const row = {
       '受付日時': new Date(), '状態': '新規', '優先度': FIRST_PRIORITY[kind], '入口': 'アプリ', '種類': KINDS[kind],
-      '内容': clean(text), '返信先': clean(d.mail, 200), '区間番号': clean(d.zoneId, 40), '区間名': clean(d.zoneName, 80),
-      '都道府県': clean(d.pref, 10), 'アプリの版': clean(d.version, 20), 'プラン': clean(d.plan, 10),
+      '内容': clean(text), '返信先': clean(d.mail, 200), '区間番号': asText(clean(d.zoneId, 40)), '区間名': clean(d.zoneName, 80),
+      '都道府県': clean(d.pref, 10), 'アプリの版': asText(clean(d.version, 20)), 'プラン': clean(d.plan, 10),
       '端末': clean(d.device, 200), '端末番号': clean(d.install, 64),
     };
     const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET);
@@ -91,4 +91,6 @@ function clean(s, max) {
   s = String(s == null ? '' : s).slice(0, max || 1000);
   return /^[=+\-@]/.test(s) ? "'" + s : s;
 }
+// 数字に見える文字（版「1.0」・区間番号など）を、数字に直されないよう文字のまま入れる
+function asText(s) { return s && /^[\d.]+$/.test(s) ? "'" + s : s; }
 function done(status) { return ContentService.createTextOutput(status).setMimeType(ContentService.MimeType.TEXT); }
