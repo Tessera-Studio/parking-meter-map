@@ -20,6 +20,8 @@ App Store のレビュー ──────────→ 週1回、手でシ�
 
 送り先は `config.js` の `feedbackUrl`（2026-11-20 に設定。スプレッドシート「メーターマップ フィードバック」の Apps Script）。空にしたときは、「送る」でメールアプリが開き、同じ内容を support@tesseras.jp あてに送る。
 
+いまのシート：[メーターマップ フィードバック](https://docs.google.com/spreadsheets/d/1UUsJPxU8HJuSyqYIxHmXNfSGGx6DDd6VzEehNaLxTOA/edit)（見られるのは共有された人だけ）
+
 ## 2. スプレッドシートの用意（最初に1回）
 
 1. Google ドライブで、新しいスプレッドシートを作る（名前の例：「メーターマップ フィードバック」）。support@tesseras.jp を見られるアカウントで作るとよい。
