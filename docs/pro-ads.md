@@ -194,7 +194,8 @@
 - プラグイン：**@capacitor-community/admob**（Google Mobile Ads SDK 入り）。
 - 起動して、App Store で有料プランを持っていないと確かめ終えたら、初期化してバナーを出す（有料プランの人に一瞬でも出さないため）。上にシートが開いたら隠し、閉じたら出し直す。
 - 設定（`config.js`）：`adsEnabled`、`admobBannerId`（バナーの広告ユニット ID）、`admobTesting`（テスト広告）。アプリ ID は `ios/App/App/Info.plist` の `GADApplicationIdentifier`（Android は `AndroidManifest.xml` の `com.google.android.gms.ads.APPLICATION_ID`）。
-- **iOS は本番の ID**（2026年11月。アプリ ID `ca-app-pub-8846614684110251~3056495365`、バナー `ca-app-pub-8846614684110251/6527615321`、`admobTesting: false`）。発行者 ID は `pub-8846614684110251`（`https://tesseras.jp/app-ads.txt` に書く）。
+- **iOS は本番の ID**（会社の AdMob アカウント。アプリ ID `ca-app-pub-4938846991161247~3447231819`、バナー `ca-app-pub-4938846991161247/8726644504`、`admobTesting: false`）。発行者 ID は `pub-4938846991161247`（`https://tesseras.jp/app-ads.txt` に書く）。
+  - 2026年11月20日に、別のアカウントの ID（`pub-8846614684110251`）から差し替えた。1.0（ビルド 2）までは古い ID が入っている
 - Android はまだ Google のテスト用のアプリ ID（`AndroidManifest.xml`）。Android を出すときは、AdMob に Android のアプリとバナーを別に作り、`config.js` のバナーの ID を機種ごとに分ける。
 - **トラッキングの許可（App Tracking Transparency）を求める**。初めて広告を出す前（無料の人が初めてアプリを開いたとき）に1回だけ。説明文（`Info.plist` の `NSUserTrackingUsageDescription`）は「あなたに合った広告を表示するために使います。許可しなくても、アプリはすべてお使いいただけます。」。許可されなければ、パーソナライズしない広告になる。有料プランの人には聞かない。
 - `SKAdNetworkItems` は Google の ID だけ入れてある。本番の前に、Google の案内にある一覧をすべて足す。
