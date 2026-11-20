@@ -136,7 +136,7 @@ The zone data is created by us from public information released by each prefectu
 
 > **ご意見・不具合のフォーム（docs/feedback.md）はビルド 2 から入る。** 審査に出す前に、上の「追加」の2行と、ID・診断の「App の機能」を App Store Connect の「App のプライバシー」に足して公開し直す。tesseras.jp のプライバシーポリシーには、`privacy.html` の「6. ご意見・不具合の報告」と同じ節を2026年11月20日に足した（Tessera-Studio/tesseras-site#3）。
 
-- 広告・診断の4行は、2026年11月18日に App Store Connect の「App のプライバシー」で公開した。フォームの分は、ビルド 2 を審査に出す前に足す。
+- 広告・診断の4行は、2026年11月18日に App Store Connect の「App のプライバシー」で公開した。フォームの分は、2026年11月20日に足して公開し直した。
 - トラッキングは安全側で申告している（アプリはトラッキングの許可（ATT）を求めていて、広告 SDK はこれらを広告のターゲティングに使いうるため）。少なく申告すると審査で指摘されうるが、多く申告してもストアの表示が変わるだけ。
 - 「ユーザに紐づく」は、広告・診断の分は「いいえ」（アカウントがなく、個人と結びつける仕組みがない）。フォームの内容とメールアドレスは「はい」（返信先のメールアドレスといっしょに保存されることがあるため。安全側の申告）。
 
@@ -176,7 +176,7 @@ The zone data is created by us from public information released by each prefectu
 - [x] 法人への移行：Apple Developer Program の登録タイプが「組織」（Tessera Studio LLC）になった（2026年11月20日に確かめた。チーム ID は同じ）
 - [x] App Store Connect の契約（無料・有料）・銀行口座・税の情報（W-8BEN-E）を会社名義で入れ直し、すべて「有効」になった（2026年11月20日）
 - [x] App のプライバシーを App Store Connect で公開（§5）
-- [ ] App のプライバシーに、ご意見・不具合のフォームの分（§5 の「追加」と「App の機能」）を足して公開し直す
+- [x] App のプライバシーに、ご意見・不具合のフォームの分（§5 の「追加」と「App の機能」）を足して公開し直した（2026年11月20日）
 - [x] `SKAdNetworkItems` を Google の一覧（50件）にした
 - [x] アプリ内のプライバシーポリシー・サポートのリンクを tesseras.jp にした（`config.js`）
 - [x] 本番の AdMob の ID（`Info.plist` の `GADApplicationIdentifier`・`config.js` の `admobBannerId`、`admobTesting: false`）（docs/pro-ads.md §23 の 6）
@@ -186,7 +186,7 @@ The zone data is created by us from public information released by each prefectu
 - [x] 手元の iPhone を AdMob の「テストデバイス」に登録した（Xcode の記録に「Ad inspector enabled」が出て、テストデバイスとして認識されていることを確かめた）
 - [x] tesseras.jp のプライバシーポリシーの所在地・制定日（Tessera-Studio/tesseras-site）
 - [x] tesseras.jp のプライバシーポリシーに「6. ご意見・不具合の報告」を足した（2026年11月20日。Tessera-Studio/tesseras-site#3）
-- [ ] 審査の連絡先の電話番号（App Store Connect で必須。公開はされない。§4）
+- [x] 審査の連絡先の電話番号を入れた（App Store Connect で必須。公開はされない。§4）
 - [x] プライバシーポリシーに所在地を書き足した
 - [ ] Sandbox の Apple ID で、実機で購入・復元を試す
 - [x] 1.0（ビルド 1）をアップロードした（2026年11月18日、Xcode 26.6・iOS 26.5 SDK）
@@ -194,7 +194,8 @@ The zone data is created by us from public information released by each prefectu
   - 届いた警告はビルド 1 と同じ（ITMS-90725 の SDK の予告と、GoogleMobileAds・UserMessagingPlatform の dSYM）。どちらも提出には影響しない
 - [ ] 審査に提出する：ビルド 2、App 内課金「プレミアム」、ストアの画像（§8）、審査の情報（§4）、**「手動でリリース」**
 - [ ] 公開後：AdMob の管理画面の「アプリストアの詳細」で App Store のアプリとひもづける（AdMob が app-ads.txt を確かめてアプリを承認する）
-- [ ] 特定商取引法に基づく表記のページ（`https://tesseras.jp/legal`）：電話番号が決まったら `docs/drafts/legal.html` をもとに tesseras-site に作り、`config.js` の `legalPublished` を `true` にする
+- [x] 特定商取引法に基づく表記のページ（`https://tesseras.jp/legal`）を作った（2026年11月20日。Tessera-Studio/tesseras-site#4）
+- [ ] アプリの購入シート・ヘルプから表記を開けるようにした（`config.js` の `legalUrl`・`legalPublished`。Tessera-Studio/parking-meter-map#53）。ビルド 2 には入っていないので、次のビルドから
 - [ ] Web 版（`index.html` の地図）をやめる：`privacy.html`・`support.html` だけを残す
 
 ## 10. 公開までの流れ
