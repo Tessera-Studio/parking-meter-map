@@ -210,12 +210,10 @@
           <i class="cp" aria-hidden="true">P</i>
           <span class="ft"><span class="fn"><b>${esc(zoneName(z))}</b>${badge(s)}</span><small>${esc(kindShort(z))} · ${fromWord} ${esc(fmtDist(d))}</small></span>
         </button>
-        <button class="funfav" type="button" data-unfav="${esc(z.id)}" aria-label="お気に入りから外す">${STAR}</button>
       </div>`;
     const placeRow = (p, i) => `
       <div class="frow place">
         <button class="fgo" type="button" data-place="${i}"><i class="fp" aria-hidden="true">${I.flag}</i><span class="ft"><span class="fn"><b>${esc(p.name)}</b></span></span></button>
-        <button class="funfav" type="button" data-unplace="${i}" aria-label="保存した行き先から外す">${STAR}</button>
       </div>`;
     $('#favBody').innerHTML = !sorted.length && !places.length
       ? '<p class="fempty">詳細の☆を押すと、ここに並びます</p>'
@@ -497,14 +495,15 @@
       <button class="arow btnrow" type="button" data-feedback><b>ご意見・不具合を送る</b><small>使いにくいところ、区間の情報の誤りなど</small></button>
       <h3>よくある質問</h3>
       <div class="faq">${(P.shown ? [['プレミアムでは何ができますか？', `タイマーとお気に入りが使えるようになり、広告も出なくなります。${priceLabel()}の買い切りです。地図と時間の表示は、これまでどおり無料です。`], ...P.FAQ] : P.FAQ).map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div>
-      <h3>このアプリについて</h3>
+      <div class="faq about"><details><summary>このアプリについて（データ・地図の出典）</summary>
       <ul class="asrc">${P.SOURCES.map(([k, t, l, u]) => `<li><b>${k}</b>${esc(t)}${u ? ` <a href="${u}" target="_blank" rel="noopener">${l}</a>` : ''}</li>`).join('')}
         <li><b>地図</b>${credit}。区間の線は OpenStreetMap から作成。表示に <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>・<a href="https://maplibre.org" target="_blank" rel="noopener">MapLibre</a> を使っています。</li>
         <li><b>検索</b>地名の検索・住所は<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院</a>の仕組みを使っています。</li></ul>
       <p class="anote">現地の標識・メーターの表示が優先されます。</p>
+      </details></div>
       ${P.shown ? legalLinks() : ''}
-      ${CFG.privacyUrl ? `<p class="blegal"><a href="${CFG.privacyUrl}" target="_blank" rel="noopener">プライバシーポリシー</a>${CFG.supportUrl ? `<a href="${CFG.supportUrl}" target="_blank" rel="noopener">サポート</a>` : ''}</p>` : ''}
-      <p class="acontact">お問い合わせ：<a href="mailto:${SUPPORT}">${SUPPORT}</a><br>運営：${SELLER}</p>
+      <p class="blegal">${CFG.privacyUrl ? `<a href="${CFG.privacyUrl}" target="_blank" rel="noopener">プライバシーポリシー</a>` : ''}<button class="alink" type="button" data-feedback>お問い合わせ</button></p>
+      <p class="acontact">運営：${SELLER}</p>
       <button class="cancel" type="button" data-cancel>閉じる</button>`);
   };
 

@@ -489,10 +489,10 @@ function renderDetail(z) {
     z.pref === '東京都' ? row('区間番号', z.id) : '',
   ].join('');
   $('#dsheet').innerHTML = `
-    <div class="dhead">
-      <button class="dclose" type="button" data-close aria-label="閉じる">${svg('<path d="M6 6l12 12M18 6L6 18"/>')}</button>
+    <div class="dhead${Pro.shown ? ' has-star' : ''}">
+      <div class="dtools">${Pro.starBtn(z.id, 'dstar')}<button class="dclose" type="button" data-close aria-label="閉じる">${svg('<path d="M6 6l12 12M18 6L6 18"/>')}</button></div>
       <p class="dkick">${esc(kicker(z))}</p>
-      <div class="dtitle"><h2 id="dtitle">${esc(zoneName(z))}</h2>${Pro.starBtn(z.id, 'dstar')}</div>
+      <div class="dtitle"><h2 id="dtitle">${esc(zoneName(z))}</h2></div>
     </div>
     <div class="dfacts">
       <div>${I.clock}<b>${esc(z.span ? z.hours : '現地で確認')}</b><span>利用時間</span></div>
