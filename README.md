@@ -161,3 +161,7 @@ WebGL が使えない端末や、地図の配信につながらないときは�
 ## ライセンス
 
 コードは MIT。東京の区間データは CC BY 4.0（警視庁）、大阪・神奈川・札幌・京都の区間の線と地図データは ODbL（OpenStreetMap）に従います。
+
+## ご意見・不具合
+
+アプリの ⓘ と詳細から送られた内容は、Google スプレッドシートに集めて週1回仕分けます。用意のしかたと仕分けの決まりは [docs/feedback.md](docs/feedback.md)（受け口の Apps Script は `tools/feedback/Code.gs`）。

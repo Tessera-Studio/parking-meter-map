@@ -210,12 +210,10 @@
           <i class="cp" aria-hidden="true">P</i>
           <span class="ft"><span class="fn"><b>${esc(zoneName(z))}</b>${badge(s)}</span><small>${esc(kindShort(z))} · ${fromWord} ${esc(fmtDist(d))}</small></span>
         </button>
-        <button class="funfav" type="button" data-unfav="${esc(z.id)}" aria-label="お気に入りから外す">${STAR}</button>
       </div>`;
     const placeRow = (p, i) => `
       <div class="frow place">
         <button class="fgo" type="button" data-place="${i}"><i class="fp" aria-hidden="true">${I.flag}</i><span class="ft"><span class="fn"><b>${esc(p.name)}</b></span></span></button>
-        <button class="funfav" type="button" data-unplace="${i}" aria-label="保存した行き先から外す">${STAR}</button>
       </div>`;
     $('#favBody').innerHTML = !sorted.length && !places.length
       ? '<p class="fempty">詳細の☆を押すと、ここに並びます</p>'
@@ -396,6 +394,68 @@
     else if (b.hasAttribute('data-buy')) checkout();
     else if (b.hasAttribute('data-restore')) restore();
     else if (b.hasAttribute('data-gopro')) P.openBuy();
+    else if (b.hasAttribute('data-feedback')) P.openFeedback();
+    else if (b.hasAttribute('data-fbsend')) sendFeedback();
+  }
+
+  /* ---------- ご意見・不具合のフォーム（docs/feedback.md） ---------- */
+  // 送り先は Google スプレッドシートに付けた Apps Script。送る内容に、アプリの版・端末・プラン（と区間）を自動で付ける。位置情報は送らない
+  const FB_KINDS = [['bug', '不具合'], ['zone', '区間の情報が違う'], ['idea', '要望'], ['other', 'その他']];
+  const FB_MAX = 1000;
+  let fbZone = null;
+  // 端末ごとの番号（送りすぎを防ぐためだけに使う。名前やメールとは結びつけない）
+  function installId() {
+    try {
+      let id = localStorage.getItem('pmm.install');
+      if (!id) { id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(16).slice(2); localStorage.setItem('pmm.install', id); }
+      return id;
+    } catch (e) { return ''; }
+  }
+  P.openFeedback = function (opts = {}) {
+    fbZone = opts.zone || null;
+    const kind = fbZone ? 'zone' : 'bug';
+    openSheet(`
+      <h2 id="buyTitle">${fbZone ? 'この区間の情報が違う' : 'ご意見・不具合を送る'}</h2>
+      ${fbZone ? `<p class="fbzone">${esc(zoneName(fbZone))}<small>${esc(fbZone.pref || '')}・区間番号 ${esc(fbZone.id)}</small></p>` : ''}
+      <div class="fbkinds" role="radiogroup" aria-label="種類">${FB_KINDS.map(([k, t]) => `<label class="fbkind"><input type="radio" name="fbkind" value="${k}"${k === kind ? ' checked' : ''}><span>${t}</span></label>`).join('')}</div>
+      <label class="fblabel" for="fbText">内容</label>
+      <textarea id="fbText" class="fbtext" maxlength="${FB_MAX}" rows="5" placeholder="${fbZone ? '例：日曜も使える／料金が300円になっていた／場所が少しずれている' : '例：○○の画面で△△を押すと止まる'}"></textarea>
+      <label class="fblabel" for="fbMail">返信先のメールアドレス（任意）</label>
+      <input id="fbMail" class="fbmail" type="email" inputmode="email" autocomplete="email" placeholder="返信が必要なときだけ">
+      <p class="fbnote">アプリの版・iOS の版・プラン${fbZone ? '・区間番号' : ''}もいっしょに送られます。現在地は送りません。</p>
+      <p class="fbmsg" id="fbMsg" aria-live="polite"></p>
+      <button class="btn brand big" type="button" data-fbsend>送る</button>
+      <button class="cancel" type="button" data-cancel>やめる</button>`);
+  };
+  async function sendFeedback() {
+    const text = $('#fbText').value.trim(), mail = $('#fbMail').value.trim(), msg = $('#fbMsg');
+    const kind = (document.querySelector('input[name="fbkind"]:checked') || {}).value || 'other';
+    if (!text) { msg.textContent = '内容を書いてください'; $('#fbText').focus(); return; }
+    if (mail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) { msg.textContent = 'メールアドレスの形を確かめてください'; return; }
+    const body = {
+      kind, text: text.slice(0, FB_MAX), mail: mail.slice(0, 200),
+      zoneId: fbZone ? String(fbZone.id) : '', zoneName: fbZone ? zoneName(fbZone) : '', pref: fbZone ? fbZone.pref || '' : '',
+      version: CFG.appVersion || '', plan: P.on ? 'プレミアム' : '無料', device: navigator.userAgent.slice(0, 200), install: installId(),
+    };
+    // 送り先がまだないとき：メールアプリで同じ内容を送る
+    if (!CFG.feedbackUrl) {
+      const label = (FB_KINDS.find(x => x[0] === kind) || [])[1] || '';
+      const lines = [body.text, '', `種類：${label}`, body.zoneId ? `区間：${body.zoneName}（${body.pref}・${body.zoneId}）` : '', `アプリ：${body.version}／${body.plan}`, `端末：${body.device}`].filter(Boolean);
+      location.href = `mailto:${SUPPORT}?subject=${encodeURIComponent(`【メーターマップ】${label}`)}&body=${encodeURIComponent(lines.join('\n'))}`;
+      P.closeSheet();
+      return;
+    }
+    const btn = document.querySelector('#buySheet [data-fbsend]');
+    btn.disabled = true; msg.textContent = '送っています…';
+    try {
+      // Apps Script は返事を読めない形（no-cors）で送る。届かないとき（オフラインなど）だけ失敗になる
+      await fetch(CFG.feedbackUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+      P.closeSheet();
+      P.toast(mail ? '送りました。ありがとうございます。返信までしばらくお待ちください' : '送りました。ありがとうございます', { ms: 4000 });
+    } catch (e) {
+      btn.disabled = false;
+      msg.textContent = '送れませんでした。通信状態を確かめて、もう一度お試しください';
+    }
   }
 
   /* ---------- 「このアプリについて」 ---------- */
@@ -432,16 +492,18 @@
       <h2 id="buyTitle">ヘルプ</h2>
       ${proRow}
       ${P.shown ? '<button class="arow btnrow" type="button" data-restore><b>購入の復元</b></button>' : ''}
+      <button class="arow btnrow" type="button" data-feedback><b>ご意見・不具合を送る</b><small>使いにくいところ、区間の情報の誤りなど</small></button>
       <h3>よくある質問</h3>
       <div class="faq">${(P.shown ? [['プレミアムでは何ができますか？', `タイマーとお気に入りが使えるようになり、広告も出なくなります。${priceLabel()}の買い切りです。地図と時間の表示は、これまでどおり無料です。`], ...P.FAQ] : P.FAQ).map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div>
-      <h3>このアプリについて</h3>
+      <div class="faq about"><details><summary>このアプリについて（データ・地図の出典）</summary>
       <ul class="asrc">${P.SOURCES.map(([k, t, l, u]) => `<li><b>${k}</b>${esc(t)}${u ? ` <a href="${u}" target="_blank" rel="noopener">${l}</a>` : ''}</li>`).join('')}
         <li><b>地図</b>${credit}。区間の線は OpenStreetMap から作成。表示に <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>・<a href="https://maplibre.org" target="_blank" rel="noopener">MapLibre</a> を使っています。</li>
         <li><b>検索</b>地名の検索・住所は<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院</a>の仕組みを使っています。</li></ul>
       <p class="anote">現地の標識・メーターの表示が優先されます。</p>
+      </details></div>
       ${P.shown ? legalLinks() : ''}
-      ${CFG.privacyUrl ? `<p class="blegal"><a href="${CFG.privacyUrl}" target="_blank" rel="noopener">プライバシーポリシー</a>${CFG.supportUrl ? `<a href="${CFG.supportUrl}" target="_blank" rel="noopener">サポート</a>` : ''}</p>` : ''}
-      <p class="acontact">お問い合わせ：<a href="mailto:${SUPPORT}">${SUPPORT}</a><br>運営：${SELLER}</p>
+      <p class="blegal">${CFG.privacyUrl ? `<a href="${CFG.privacyUrl}" target="_blank" rel="noopener">プライバシーポリシー</a>` : ''}<button class="alink" type="button" data-feedback>お問い合わせ</button></p>
+      <p class="acontact">運営：${SELLER}</p>
       <button class="cancel" type="button" data-cancel>閉じる</button>`);
   };
 
