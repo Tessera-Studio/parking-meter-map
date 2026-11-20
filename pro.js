@@ -8,7 +8,8 @@
     proEnabled: false,     // 販売を始めたら true（App Store Connect に商品を登録してから）
     proShown: false,       // 販売前でも、有料プランの機能を鍵付きで見せる（購入は「準備中」）
     storeProductId: 'jp.tesseras.parkingmetermap.pro', // App Store の商品 ID（買い切り・非消耗型）
-    legalPublished: false, // 特商法の表記・プライバシーポリシーを公開したら true
+    legalPublished: false, // 特商法の表記のページを公開したら true
+    legalUrl: '',          // 特定商取引法に基づく表記の URL
     privacyUrl: '',        // プライバシーポリシーの URL（ヘルプに出す。App Store の審査で必要）
     supportUrl: '',        // サポートの URL
     adsEnabled: false,     // 広告（AdMob）を出すなら true
@@ -253,8 +254,12 @@
   }
 
   /* ---------- 購入シート・復元 ---------- */
-  // 特定商取引法の表記・プライバシーポリシーは、ページを公開するまでリンクを出さない（config.js の legalPublished）
-  const legalLinks = () => !CFG.legalPublished ? '' : '<p class="blegal"><a href="legal.html" target="_blank" rel="noopener">特定商取引法に基づく表記</a><a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a></p>';
+  // 特定商取引法の表記は、ページを公開するまでリンクを出さない（config.js の legalPublished・legalUrl）。
+  // アプリの中にはページを入れていないので、tesseras.jp の URL を開く（相対パスだと開けない）
+  const legalLink = () => CFG.legalPublished && CFG.legalUrl ? `<a href="${CFG.legalUrl}" target="_blank" rel="noopener">特定商取引法に基づく表記</a>` : '';
+  const privacyLink = () => CFG.privacyUrl ? `<a href="${CFG.privacyUrl}" target="_blank" rel="noopener">プライバシーポリシー</a>` : '';
+  // 購入シートの下：特定商取引法に基づく表記・プライバシーポリシー
+  const legalLinks = () => { const l = legalLink() + privacyLink(); return l ? `<p class="blegal">${l}</p>` : ''; };
   function openSheet(html) {
     $('#buySheet').classList.remove('prosheet');
     $('#buySheet').innerHTML = html;
@@ -501,8 +506,7 @@
         <li><b>検索</b>地名の検索・住所は<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院</a>の仕組みを使っています。</li></ul>
       <p class="anote">現地の標識・メーターの表示が優先されます。</p>
       </details></div>
-      ${P.shown ? legalLinks() : ''}
-      <p class="blegal">${CFG.privacyUrl ? `<a href="${CFG.privacyUrl}" target="_blank" rel="noopener">プライバシーポリシー</a>` : ''}<button class="alink" type="button" data-feedback>お問い合わせ</button></p>
+      <p class="blegal">${privacyLink()}${P.shown ? legalLink() : ''}<button class="alink" type="button" data-feedback>お問い合わせ</button></p>
       <p class="acontact">運営：${SELLER}</p>
       <button class="cancel" type="button" data-cancel>閉じる</button>`);
   };
