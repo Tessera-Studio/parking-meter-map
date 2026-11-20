@@ -13,7 +13,7 @@ const HEAD = ['受付日時', '状態', '優先度', '入口', '種類', '内容
   'アプリの版', 'プラン', '端末', '端末番号', '担当', '対応した版', 'メモ'];
 const STATES = ['新規', '確認済み', '対応予定', '対応済み', '対応しない'];
 const PRIORITIES = ['P1', 'P2', 'P3'];
-const KINDS = { bug: '不具合', zone: '区間の情報が違う', idea: '要望', other: 'その他' };
+const KINDS = { bug: '不具合', zone: '区間情報の訂正', idea: '要望', other: 'その他' };
 // 最初の目安の優先度（仕分けのときに直す）
 const FIRST_PRIORITY = { bug: 'P2', zone: 'P1', idea: 'P3', other: 'P3' };
 
