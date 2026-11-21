@@ -827,7 +827,7 @@ function refresh() {
 }
 
 /* ---------- 行き先 ---------- */
-const AREA_RE = /^(東京都|大阪府|京都府|北海道|神奈川県)/;
+const SEARCH_NEAR_M = 2000; // 検索の候補に出す範囲（地名から、いちばん近い区間まで）
 // 行き先の短い名前：都道府県と区市町村を省く（「東京都中央区銀座四丁目」→「銀座四丁目」）
 const shortName = title => {
   const t = title.replace(/^(北海道|東京都|(?:大阪|京都)府|.{2,3}県)/, '') || title;
@@ -867,15 +867,22 @@ async function search(q) {
   showPanel('<p class="qmsg">探しています…</p>');
   try {
     const res = await fetch(GSI_SEARCH + encodeURIComponent(q));
-    // 区間のある都道府県の地名を先に（同名の地名が全国にあるため）
-    const all = (await res.json()).slice(0, 30)
-      .map(h => ({ title: h.properties.title, lat: h.geometry.coordinates[1], lng: h.geometry.coordinates[0] }));
-    hits = [...all.filter(h => AREA_RE.test(h.title)), ...all.filter(h => !AREA_RE.test(h.title))].slice(0, 6);
-    if (!hits.length) { showPanel(`<p class="qmsg">「${esc(q)}」は見つかりませんでした</p>`); return; }
+    // 区間の近く（いちばん近い区間まで SEARCH_NEAR_M 以内）の地名だけを出し、近くの区間が多い順に並べる。
+    // 全国の地名が返ってくるので、区間のない地域の候補は出さない
+    const all = (await res.json()).slice(0, 50)
+      .map(h => ({ title: h.properties.title, lat: h.geometry.coordinates[1], lng: h.geometry.coordinates[0] }))
+      .map(h => ({ ...h, n: nearCount([h.lat, h.lng]), near: Math.min(...zones.map(z => meters([h.lat, h.lng], z.center))) }));
+    hits = all.filter(h => h.near <= SEARCH_NEAR_M).sort((a, b) => b.n - a.n || a.near - b.near).slice(0, 6);
+    if (!hits.length) {
+      showPanel(all.length
+        ? `<p class="qmsg">「${esc(q)}」の近くに、パーキング・メーターの区間はありません。<br>対応しているのは、東京・大阪・神奈川・札幌・京都の一部です。</p>`
+        : `<p class="qmsg">「${esc(q)}」は見つかりませんでした</p>`);
+      return;
+    }
     if (hits.length === 1) { setDest(hits[0]); return; }
     showPanel(hits.map((h, i) => {
       const [, pref, rest] = h.title.match(/^(北海道|東京都|(?:大阪|京都)府|.{2,3}県)?(.*)$/);
-      return `<button type="button" class="qrow" data-hit="${i}">${I.pin}<span class="qt"><b>${esc(rest || h.title)}</b>${pref ? `<span>${esc(pref)}</span>` : ''}</span><span class="qn">${nearCount([h.lat, h.lng])}区間</span></button>`;
+      return `<button type="button" class="qrow" data-hit="${i}">${I.pin}<span class="qt"><b>${esc(rest || h.title)}</b>${pref ? `<span>${esc(pref)}</span>` : ''}</span><span class="qn">${h.n ? `${h.n}区間` : `${(h.near / 1000).toFixed(1)}km先に区間`}</span></button>`;
     }).join(''));
   } catch (e) {
     showPanel('<p class="qmsg">地名検索につながりませんでした</p>');
