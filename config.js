@@ -24,5 +24,5 @@ window.PMM_CONFIG = {
   admobBannerId: 'ca-app-pub-4938846991161247/8726644504',
   admobTesting: false,
   feedbackUrl: 'https://script.google.com/macros/s/AKfycbzX8HPeJtnXykQuMyKskc4gQP4o1duKhzvC_w1mdzAZ_28lMdyp5n5MqjjZfCTGonxn/exec',
-  appVersion: '1.0',
+  appVersion: '1.0.1',
 };
