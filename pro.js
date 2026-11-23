@@ -17,7 +17,7 @@
     admobTesting: true,    // テスト広告を出す（本番の ID にしたら false）
   }, window.PMM_CONFIG || {});
 
-  const PRICE = '500円';
+  const PRICE = '980円';
   const SELLER = '合同会社Tessera Studio';
   const SELLER_SHORT = 'Tessera Studio';
   const SUPPORT = 'support@tesseras.jp';
@@ -68,7 +68,7 @@
     try { o ? localStorage.setItem(K.pro, JSON.stringify(o)) : localStorage.removeItem(K.pro); } catch (e) {}
     if (was !== P.on) afterChange();
   }
-  // 値段はストアの表示（端末の国・通貨）に合わせる。取れないときは 500円 のまま
+  // 値段はストアの表示（端末の国・通貨）に合わせる。取れないときは 980円 のまま
   async function loadPrice() {
     if (!store) return;
     try {
@@ -318,7 +318,7 @@
     },
   });
   const CHIP = { timer: 'タイマー', fav: 'お気に入り', ads: '広告なし' };
-  // 値段の表示：ストアの表示（「¥500」）を使い、取れないときは「500円」を「¥500」の形に
+  // 値段の表示：ストアの表示（「¥980」）を使い、取れないときは「980円」を「¥980」の形に
   const priceLabel = () => String(P.PRICE).replace(/^([\d,]+)円$/, '¥$1');
   function proSheet(kind) {
     const u = UPSELL()[kind], cur = u.cur || kind, price = priceLabel();

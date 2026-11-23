@@ -55,14 +55,14 @@ Android Studio で、右上のエミュレーター（Pixel など）を選ん�
 
 ## 有料プランの購入を試す（シミュレーター・StoreKit）
 
-購入は App Store のアプリ内課金（StoreKit 2。プラグイン @capgo/native-purchases）。Xcode の **StoreKit 設定ファイル**を使うと、App Store Connect に商品を登録する前でも、シミュレーターで購入・復元・返金を試せる（お金はかからない）。商品は `ios/App/Products.storekit` に入れてある（商品 ID `jp.tesseras.parkingmetermap.pro`・非消耗型・500円）。
+購入は App Store のアプリ内課金（StoreKit 2。プラグイン @capgo/native-purchases）。Xcode の **StoreKit 設定ファイル**を使うと、App Store Connect に商品を登録する前でも、シミュレーターで購入・復元・返金を試せる（お金はかからない）。商品は `ios/App/Products.storekit` に入れてある（商品 ID `jp.tesseras.parkingmetermap.pro`・非消耗型・980円）。
 
 初回だけ、Xcode で次の2つを行う：
 
 1. **ファイルをプロジェクトに入れる**：左の一覧の一番上の「App」（青いアイコン）を右クリック →「Add Files to "App"…」→ `ios/App/Products.storekit` を選ぶ →「Add」（Targets のチェックは外してよい）
 2. **スキームに設定する**：メニューの **Product → Scheme → Edit Scheme…** → 左の「Run」→ 上の「Options」タブ →「StoreKit Configuration」で **Products.storekit** を選ぶ →「Close」
 
-そのあと ▶ で起動し、タイマーか★を押す →「¥500で購入する」→ 購入の確認が出る →「購入」。鍵が外れれば成功。
+そのあと ▶ で起動し、タイマーか★を押す →「¥980で購入する」→ 購入の確認が出る →「購入」。鍵が外れれば成功。
 
 - **返金を試す**：メニューの **Debug → StoreKit → Manage Transactions…** で購入を選び、右クリック →「Refund Purchases」。アプリに戻ると鍵が付き直す
 - **最初からやり直す**：同じ画面で購入を選んで削除（ゴミ箱）。アプリを消して入れ直すと、前回の記録も消える
