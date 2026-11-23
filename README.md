@@ -22,7 +22,7 @@
 
 **広告**：無料のときは、画面の一番下に AdMob のバナー（iOS は本番の ID。Android はまだテスト用の ID）。
 
-**有料プラン（500円・買い切り）**：タイマー・お気に入り・広告なし。購入は App Store のアプリ内課金（StoreKit 2）で、サーバーは使いません。無料のときはボタンが鍵付きで見え、押すと説明と購入のシートが出ます（[docs/pro-ads.md](docs/pro-ads.md)）。シミュレーターでの試し方は [docs/app.md](docs/app.md)、販売までの手順は docs/pro-ads.md §23。
+**有料プラン（980円・買い切り）**：タイマー・お気に入り・広告なし。購入は App Store のアプリ内課金（StoreKit 2）で、サーバーは使いません。無料のときはボタンが鍵付きで見え、押すと説明と購入のシートが出ます（[docs/pro-ads.md](docs/pro-ads.md)）。シミュレーターでの試し方は [docs/app.md](docs/app.md)、販売までの手順は docs/pro-ads.md §23。
 
 ## データ
 
