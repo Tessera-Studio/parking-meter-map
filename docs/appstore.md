@@ -82,7 +82,7 @@ App Store Connect に入れる文章・申告・画像の下書きです。法�
 
 ### 新機能（最初のバージョンでは入れない）
 
-1.0.1（ビルド 4）：
+1.0 は公開しないまま 1.0.1（ビルド 5）が最初の公開版になったので、次の文面は使っていない（次のアップデートの参考）：
 
 ```
 ・検索で、パーキング・メーターの区間がある地域の地名だけを表示するようにしました。区間のない地域を検索したときは、その旨をお知らせします。
@@ -99,27 +99,41 @@ App Store Connect に入れる文章・申告・画像の下書きです。法�
 | 価格 | 980円（2026年11月23日、最初の公開の前に 500円 から変更） |
 | 表示名（30文字まで） | プレミアム |
 | 説明（45文字まで） | タイマーとお気に入りが使え、広告が出なくなります |
-| 審査用のスクリーンショット | プレミアムのシート（タイマーかお気に入りを押したときの画面）を1枚 |
-| 審査メモ | 地図の右下のタイマーかお気に入り（★）を押すと、購入のシートが出ます。 |
+| 審査用のスクリーンショット | 購入シート（タイマーかお気に入りを押したときの画面。¥980 の表示）を1枚。**必須**（ないと App 内課金を審査に出せない） |
+| 審査メモ | 下の英文 |
 
 - ファミリー共有：オフ（`Products.storekit` と同じ）。
-- 最初のアプリの審査に出すとき、この App 内課金もいっしょに選んで審査に出す。
+- 最初のアプリの審査に出すとき、この App 内課金もいっしょに選んで審査に出す。バージョンのページの「App 内課金とサブスクリプション」で選び、「提出物の下書き」にアプリのバージョンと App 内課金の**両方**が並んでから「審査へ提出」を押す。
+- 1.0（ビルド 3）は、App 内課金を審査に出していなかったためリジェクトされた（ガイドライン 2.1(b)、2026年11月23日）。
+
+審査メモ（App 内課金）：
+
+```
+Non-consumable purchase that unlocks the parking timer, favorites, and removes ads.
+To find it: tap the timer button or the star button at the bottom right of the map. The purchase sheet opens with the price (¥980) and the purchase button. "Restore purchases" is in the same sheet and in Help (ⓘ at the top right).
+```
 
 ## 4. 審査の情報（App Review に伝えること）
 
 - サインイン：不要（アカウントの仕組みはありません）。App Store Connect の「サインインが必要です」は**チェックを外す**（入れたままだと、審査でログイン情報を求められて止まる）
 - 連絡先：苔口 穂高（ローマ字で Kokeguchi / Hodaka でもよい）／support@tesseras.jp／電話番号（国番号付き。+81 で始め、先頭の 0 を取る）。審査の担当者だけが見る
-- メモ（英語）：
+- メモ（英語。2026年11月24日に 1.0.1（ビルド 5）で出し直したときのもの）：
 
 ```
-MeterMap shows on-street parking meter / parking ticket zones in Tokyo, Osaka, Kanagawa, Sapporo and Kyoto on a map, with their hours, time limits and fees. No account is needed.
+Thank you for your previous review. In this submission:
+- We have submitted the In-App Purchase "プレミアム" (product ID: jp.tesseras.parkingmetermap.pro, non-consumable, ¥980) for review together with the app, including the App Review screenshot.
+- We have uploaded a new build, version 1.0.1 (5).
+
+About the app:
+MeterMap shows on-street parking meter / parking ticket zones in Tokyo, Osaka, Kanagawa, Sapporo and Kyoto on a map, with their hours, time limits and fees. No account or sign-in is needed.
 
 How to review:
-- The map opens at the current location. If the device is outside Japan, search "Ginza" in the search field to see zones.
-- In-app purchase (non-consumable, "プレミアム"): tap the timer button or the star button at the bottom right. The sheet shows the purchase button and "Restore purchases".
-- Location is used only on the device to show nearby zones. Notifications are used only for the parking timer (10 minutes before and at the end).
-- App Tracking Transparency is requested once, just before the first banner ad is shown (free users only; the banner is at the bottom of the screen).
-- Banner ads may not appear during review because our AdMob account is still pending approval; the App Tracking Transparency prompt is still shown before the first ad request.
+- The map opens at the current location. If the device is outside Japan, type "Ginza" in the search field at the top and select a result to see zones.
+- In-App Purchase: tap the timer button or the star button at the bottom right of the map. The purchase sheet shows the price, the purchase button and "Restore purchases". "Restore purchases" is also available from the ⓘ button (Help) at the top right.
+- Premium unlocks the parking timer (with notifications 10 minutes before and at the end), favorites, and removes ads.
+- Location is used only on the device to show nearby zones. Notifications are used only for the parking timer.
+- App Tracking Transparency is requested once, just before the first banner ad is shown (free users only). Banner ads are served by Google AdMob; until the app is published and linked in AdMob, ads may not always be filled.
+- "Send feedback" in Help sends the message to our support spreadsheet (Google Sheets). The reply email address is optional.
 
 The zone data is created by us from public information released by each prefectural police; it is not provided by the police.
 ```
@@ -158,6 +172,9 @@ The zone data is created by us from public information released by each prefectu
 すべて「なし」→ **4+**。
 - 無制限の Web アクセス：なし（アプリの中にブラウザはない。外部のリンクは Safari で開く）
 - ギャンブル・コンテストなど：なし
+- 位置情報の共有（ほかの利用者に位置を知らせられるか）：いいえ（現在地は端末の中だけで使う）
+- 出会い系（知らない人と出会う・交流する機能）：いいえ
+  - この2つは2026年11月に足された質問。2027年1月15日までは任意だが、新しいアプリを出すときは答える必要がある
 
 ## 7. 輸出コンプライアンス
 
@@ -178,39 +195,41 @@ The zone data is created by us from public information released by each prefectu
 - 「iPhone Duo」の欄（外側 1398 × 2034、内側 2007 × 2853）は、いまは入れなくても提出できる。iOS 27.1 SDK 以降でビルドしたものは、2027年4月から必要になるという解説がある。iPad・Apple Watch の欄は、iPhone だけのアプリなので要らない。
 - 画面を撮り直したときは、`store-assets/source/` の同じ名前の画像を置き換えて、スクリプトで作り直す。
 
-## 9. 申請の前に残っていること
+## 9. 公開までの作業
 
 - [x] 法人への移行：Apple Developer Program の登録タイプが「組織」（Tessera Studio LLC）になった（2026年11月20日に確かめた。チーム ID は同じ）
 - [x] App Store Connect の契約（無料・有料）・銀行口座・税の情報（W-8BEN-E）を会社名義で入れ直し、すべて「有効」になった（2026年11月20日）
-- [x] App のプライバシーを App Store Connect で公開（§5）
-- [x] App のプライバシーに、ご意見・不具合のフォームの分（§5 の「追加」と「App の機能」）を足して公開し直した（2026年11月20日）
+- [x] App のプライバシーを App Store Connect で公開（§5）。ご意見・不具合のフォームの分も足して公開し直した（2026年11月20日）
 - [x] `SKAdNetworkItems` を Google の一覧（50件）にした
-- [x] アプリ内のプライバシーポリシー・サポートのリンクを tesseras.jp にした（`config.js`）
-- [x] 本番の AdMob の ID（`Info.plist` の `GADApplicationIdentifier`・`config.js` の `admobBannerId`、`admobTesting: false`）（docs/pro-ads.md §23 の 6）
-- [x] `https://tesseras.jp/app-ads.txt` を置いた（Tessera-Studio/tesseras-site）
-- [ ] AdMob のアカウントの承認：2026年11月18日の時点で審査中。それまでは「Account not approved yet」で広告が届かない（バナーの枠はアプリが自動で閉じる）
-- [ ] AdMob の支払いプロファイルを会社名義（合同会社Tessera Studio）にする
-- [x] 手元の iPhone を AdMob の「テストデバイス」に登録した（Xcode の記録に「Ad inspector enabled」が出て、テストデバイスとして認識されていることを確かめた）
-- [x] tesseras.jp のプライバシーポリシーの所在地・制定日（Tessera-Studio/tesseras-site）
-- [x] tesseras.jp のプライバシーポリシーに「6. ご意見・不具合の報告」を足した（2026年11月20日。Tessera-Studio/tesseras-site#3）
-- [x] 審査の連絡先の電話番号を入れた（App Store Connect で必須。公開はされない。§4）
-- [x] プライバシーポリシーに所在地を書き足した
+- [x] アプリ内のプライバシーポリシー・サポート・特定商取引法に基づく表記のリンクを tesseras.jp にした（`config.js`）
+- [x] AdMob：会社のアカウント（`pub-4938846991161247`）の ID にした（2026年11月20日。docs/pro-ads.md §16）。アカウントは承認済み
+  - 前のアカウント（`pub-8846614684110251`）の ID は、公開しなかった 1.0 のビルド 1〜3 にだけ入っていた
+- [x] `https://tesseras.jp/app-ads.txt` を会社のアカウントの行だけにした（Tessera-Studio/tesseras-site）
+- [x] 手元の iPhone を、会社の AdMob アカウントの「テストデバイス」に登録した（広告に「Test mode」と出ることを確かめた）
+- [ ] AdMob の支払いプロファイルが会社名義（合同会社Tessera Studio）になっているか確かめる
+- [x] tesseras.jp のプライバシーポリシー（所在地・制定日・「6. ご意見・不具合の報告」）
+- [x] 特定商取引法に基づく表記のページ（`https://tesseras.jp/legal`。Tessera-Studio/tesseras-site#4）。アプリの購入シート・ヘルプから開ける（1.0.1 から）
+- [x] プレミアムの価格を 980円 にした（App Store Connect・アプリの予備の表示・サイト。2026年11月23日）
+- [x] 審査の連絡先の電話番号を入れた（§4）
+- [x] 年齢制限の追加の質問（位置情報の共有・出会い系）に答えた（§6）
 - [ ] Sandbox の Apple ID で、実機で購入・復元を試す
-- [x] 1.0（ビルド 1）をアップロードした（2026年11月18日、Xcode 26.6・iOS 26.5 SDK）
-- [x] 1.0（ビルド 2）をアップロードし、バージョン 1.0 のビルドを 1 から 2 に差し替えた（2026年11月20日、Xcode 26.6・iOS 26.5 SDK）。ご意見・不具合のフォーム、区間情報の訂正のボタン、お気に入りまわりの調整が入っている
-  - 届いた警告はビルド 1 と同じ（ITMS-90725 の SDK の予告と、GoogleMobileAds・UserMessagingPlatform の dSYM）。どちらも提出には影響しない
-- [ ] 審査に提出する：ビルド 2、App 内課金「プレミアム」、ストアの画像（§8）、審査の情報（§4）、**「手動でリリース」**
-- [ ] 公開後：AdMob の管理画面の「アプリストアの詳細」で App Store のアプリとひもづける（AdMob が app-ads.txt を確かめてアプリを承認する）
-- [x] 特定商取引法に基づく表記のページ（`https://tesseras.jp/legal`）を作った（2026年11月20日。Tessera-Studio/tesseras-site#4）
-- [ ] アプリの購入シート・ヘルプから表記を開けるようにした（`config.js` の `legalUrl`・`legalPublished`。Tessera-Studio/parking-meter-map#53）。ビルド 2 には入っていないので、次のビルドから
+- ビルドの記録（どれも Xcode 26.6・iOS 26.5 SDK。届く警告は ITMS-90725 の SDK の予告と、GoogleMobileAds・UserMessagingPlatform の dSYM で、提出には影響しない）
+  - [x] 1.0（ビルド 1〜3）：アップロード。ビルド 3 で審査に出したが、App 内課金を出していなかったためリジェクト（2026年11月23日）。取り下げて、公開はしていない
+  - [x] 1.0.1（ビルド 4）：検索の改善、カード・詳細の見た目の調整
+  - [x] 1.0.1（ビルド 5）：プレミアムの予備の価格表示を 980円 に
+- [x] バージョンの番号を 1.0 から 1.0.1 に変え、ビルド 5 と App 内課金「プレミアム」をいっしょに審査に出した（2026年11月24日）
+- [ ] 承認されたら公開する（§10）
+- [ ] 公開後：AdMob の「Apps」→ メーターマップの「Add store」で App Store のアプリとひもづける（AdMob が app-ads.txt を確かめてアプリを審査し、配信の制限が外れる）
 - [ ] Web 版（`index.html` の地図）をやめる：`privacy.html`・`support.html` だけを残す
 
 ## 10. 公開までの流れ
 
 2026年11月18日に、個人から組織への移行を Apple のデベロッパサポートに申請し、11月20日に完了した。Apple Developer Program の登録タイプは「組織」（Tessera Studio LLC、チーム ID `RS34B9UDRU` は同じ）。契約・銀行口座・税の情報も会社名義で「有効」なので、App Store の販売元は会社名になる。
 
-1. **審査に出す**：ビルド 2 で、リリースの方法を「手動でリリース」にして提出する。
-2. **承認されたら**（「デベロッパによるリリース待ち」）：バージョン 1.0 のページで「このバージョンをリリース」を押す。
-3. **公開のあと**：AdMob の「アプリストアの詳細」で App Store のアプリとひもづける（§9）。
+最初の公開版は **1.0.1（ビルド 5）**。1.0 は審査でリジェクトされ、取り下げたまま公開していない。
 
-次のアップデートは、2027年4月より前に Xcode 27 以上に替えてからビルドする（ITMS-90725）。
+1. **審査を待つ**：1.0.1（ビルド 5）と App 内課金「プレミアム」を、2026年11月24日に審査に出した。
+2. **承認されたら**（「デベロッパによるリリース待ち」）：バージョン 1.0.1 のページで「このバージョンをリリース」を押す。
+3. **公開のあと**：AdMob の「Add store」で App Store のアプリとひもづける（§9）。ストアのページで、販売元・画像・説明文・価格（980円）を確かめる。
+
+次のアップデートは、バージョンを 1.0.2 などに上げ、「このバージョンの新機能」を書いて出す。2027年4月より前に Xcode 27 以上に替えてからビルドする（ITMS-90725）。
