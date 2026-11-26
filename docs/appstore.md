@@ -25,7 +25,9 @@ App Store Connect に入れる文章・申告・画像の下書きです。法�
 | マーケティング URL | https://tesseras.jp/metermap/（AdMob の `app-ads.txt` を `https://tesseras.jp/app-ads.txt` に置くため、開発者サイトを tesseras.jp にしておく） |
 
 - 名前は、ホーム画面の「メーターマップ」とそろえる。起動画面の英語表記は「MeterMap」。
-- サポートとプライバシーポリシーのページは、会社サイト（リポジトリ Tessera-Studio/tesseras-site の `metermap/`）で公開する。リポジトリを Tessera-Studio に移したので、旧 URL（hodakamiwako-art.github.io）は使わない（GitHub Pages は移管後に転送されない）。
+- サポート・プライバシーポリシー・特定商取引法に基づく表記のページと `app-ads.txt` は、会社サイト tesseras.jp で公開する（`/metermap/`・`/metermap/privacy`・`/legal`・`/app-ads.txt`）。
+  - 2026年11月26日から、tesseras.jp は別の Claude のセッションで作った新しいサイトで公開している（リポジトリ Tessera-Studio/tesseras-site は元の文面として残しているが、表には出ていない）。
+  - 新しいサイトに切り替えたとき、この4つの URL がすべてトップページになり、App Store・AdMob・アプリ内のリンクが開けなくなった。同じ日に新しいサイトの側で足して直した。**直すときは新しいサイトの側を直し、4つの URL を消さない。**
 - アプリの「？」のメニューのリンクも同じ URL（`config.js` の `privacyUrl`・`supportUrl`）。このリポジトリの `support.html`・`privacy.html` は文面の元として残す。
 
 ## 2. 説明文
@@ -219,7 +221,9 @@ The zone data is created by us from public information released by each prefectu
   - [x] 1.0.1（ビルド 5）：プレミアムの予備の価格表示を 980円 に
 - [x] バージョンの番号を 1.0 から 1.0.1 に変え、ビルド 5 と App 内課金「プレミアム」をいっしょに審査に出した（2026年11月24日）
 - [x] 承認され、公開した。2026年11月26日に App Store Connect で「配信準備完了」（配信中）を確かめた。ストアのページ：https://apps.apple.com/jp/app/id6824193037
-- [ ] 公開後：AdMob の「Apps」→ メーターマップの「Add store」で App Store のアプリとひもづける（AdMob が app-ads.txt を確かめてアプリを審査し、配信の制限が外れる）
+- [x] AdMob：会社のアカウント（`pub-4938846991161247`）のメーターマップを App Store のアプリとひもづけた（Store ID 6824193037。2026年11月26日）
+- [ ] AdMob の app-ads.txt の確認（Verify app）を通す：2026年11月26日に一度失敗（tesseras.jp が新しいサイトに変わり、`/app-ads.txt` もトップページを返していたため）。新しいサイトに足したあと「Check for updates」で確かめ直す。通ると AdMob の審査が始まり、配信の制限（Limited ad serving）が外れる
+  - 前のアカウント（`pub-8846614684110251`）のメーターマップは使わない（App visibility で非表示にしておく）
 - [ ] Web 版（`index.html` の地図）をやめる：`privacy.html`・`support.html` だけを残す
 
 ## 10. 公開までの流れ（2026年11月に公開済み）
