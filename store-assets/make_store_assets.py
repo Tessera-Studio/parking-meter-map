@@ -1,5 +1,5 @@
-"""MeterMap App Store creative: 6 designed screenshots (1320x2868 and 1206x2622 in iphone-6.3/), product page header (3840x1646),
-search results asset (3840x2560). All RGB PNG (no alpha).
+"""MeterMap App Store creative: 6 designed screenshots (1320x2868 and 1206x2622 in iphone-6.3/), search results asset (3840x2560).
+The product page header is made by make_header_city.py. All RGB PNG (no alpha).
 
 usage: python3 make_store_assets.py <shots_dir> <font_dir> <out_dir>
 """
@@ -204,21 +204,8 @@ def blue_canvas(w, h, signs):
     return c
 
 
-# ---------------------------------------------------------------- 2) product page header 3840x1646
-HW, HH = 3840, 1646
-SAFE_H = (1097, 493, 1097 + 1646, 493 + 661)
-hdr = blue_canvas(HW, HH, [(130, 330, 900), (2810, 330, 900)])   # signs stay outside the safe area
-d = ImageDraw.Draw(hdr)
-l1 = [('いま使える', font(F_BLACK, 132), YELLOW), ('路上パーキングが', font(F_BLACK, 112), WHITE)]
-l2 = [('ひと目でわかる', font(F_BLACK, 168), WHITE)]
-sw_ = SAFE_H[2] - SAFE_H[0]
-h1 = round(132 * 1.16); h2 = round(168 * 1.16)
-y0 = SAFE_H[1] + (661 - (h1 + h2 + 10)) / 2
-_, w1 = draw_runs(d, SAFE_H[0], y0, l1, align='center', width=sw_)
-_, w2 = draw_runs(d, SAFE_H[0], y0 + h1 + 10, l2, align='center', width=sw_)
-assert max(w1, w2) <= sw_, (w1, w2)
-hdr.convert('RGB').save(OUT / 'header_3840x1646.png', 'PNG', optimize=True)
-print('header', hdr.size, 'text widths', round(w1), round(w2), 'safe w', sw_)
+# ---------------------------------------------------------------- 2) product page header
+# ヘッダアセットは make_header_city.py で作る（起動画面の街並みとメーターのイラスト。2026年11月26日に差し替え）
 
 # ---------------------------------------------------------------- 3) search results 3840x2560
 SW_, SH_ = 3840, 2560

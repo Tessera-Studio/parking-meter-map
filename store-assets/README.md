@@ -6,19 +6,28 @@ App Store Connect に入れる画像です。2026年11月18日に作りました
 |---|---|---|
 | `iphone-6.3/01_いま使える.png` 〜 `06_お気に入り.png` | **スクリーンショット（App Store Connect の「Dynamic Island搭載iPhone（中型ディスプレイ）」に入れる。この順に並べる）** | 1206 × 2622 |
 | `01_いま使える.png` 〜 `06_お気に入り.png` | 同じスクリーンショットの 6.9インチ版（大型ディスプレイの欄が出たとき用） | 1320 × 2868 |
-| `header_3840x1646.png` | プロダクトページのヘッダアセット | 3840 × 1646 |
+| `header_3840x1646.png` | プロダクトページのヘッダアセット（起動画面の街並みとメーターのイラスト。`make_header_city.py` で作る） | 3840 × 1646 |
 | `search_3840x2560.png` | 検索結果アセット | 3840 × 2560 |
 
 - どれも透過のない PNG です（App Store Connect は透過のある画像を受け付けない）。
 - 2026年11月の App Store Connect では、iPhone の基準のスクリーンショットは「中型ディスプレイ」（1206 × 2622 か 1179 × 2556）。6.9インチ（1320 × 2868）はその欄では「サイズが無効」になる。
 - 「iPhone Duo」の欄（外側 1398 × 2034、内側 2007 × 2853）は、2026年11月の時点では入れなくても提出できる（iOS 27.1 SDK 以降でビルドしたものは2027年4月から必要になる、とする解説がある）。iPad・Apple Watch の欄は、iPhone だけのアプリなので要らない。
 - ヘッダと検索結果の文字は、Apple の決めた「必ず表示される範囲」に入れています。ヘッダは 1646 × 661（x 1097, y 493）、検索結果は 2168 × 1030（x 836, y 765）です（[Creative assets specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/creative-assets-specifications/)）。
-- 背景は、どれもスクリーンショットと同じ青（起動画面の色に近い青のグラデーション）に、駐車場の標識の「P」を薄く重ねています。
+- スクリーンショットと検索結果アセットの背景は、起動画面の色に近い青のグラデーションに、駐車場の標識の「P」を薄く重ねています。
+- ヘッダアセットは、起動画面の街並みとメーターのイラスト（`ios/App/App/Assets.xcassets/Splash.imageset/`）を使っています。元の絵は縦長なので、まん中に本物を置き、左右は街並みを鏡に映してぼかしてつないでいます（外側は端末によって切れる背景の部分）。
 - 価格・URL・ほかのサービスのロゴ・裏付けのない表現（「No.1」など）は入れません（[App Store Asset Best Practices](https://developer.apple.com/app-store/asset-best-practices/)）。
 
 並び順：01 いま使える → 02 時間も料金も → 03 目的地から → 04 すぐ案内 → 05 タイマー（プレミアム） → 06 お気に入り（プレミアム）。無料で使える機能を先に、プレミアムの機能を最後に並べています。
 
 ## 作り直し方
+
+ヘッダアセットだけは別のスクリプトです。
+
+```sh
+python3 store-assets/make_header_city.py /usr/share/fonts/opentype/noto store-assets/header_3840x1646.png
+```
+
+そのほか（スクリーンショット・検索結果アセット）：
 
 文言・色・端末の傾きは `make_store_assets.py` の上のほう（`SLIDES`、ヘッダ・検索結果の `l1`・`l2`・`lines`）で変えます。
 
