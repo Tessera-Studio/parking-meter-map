@@ -2,7 +2,7 @@
 
 東京・大阪・神奈川・札幌・京都のパーキング・メーター／パーキング・チケットの設置区間 **915区間**（東京752・神奈川107・大阪41・札幌10・京都5）を、地図と「近い順」の一覧で探せるアプリです。
 
-**iPhone・Android のアプリ**として出します（Capacitor。Web 版はやめる予定）。動かし方は [docs/app.md](docs/app.md)。
+**iPhone 版を App Store で配信中**です（アプリ名「メーターマップ」、[https://apps.apple.com/jp/app/id6824193037](https://apps.apple.com/jp/app/id6824193037)。2026年11月に公開）。Android 版は準備中。アプリは Capacitor で作り、Web 版はやめる予定。動かし方は [docs/app.md](docs/app.md)。
 
 ## できること
 
