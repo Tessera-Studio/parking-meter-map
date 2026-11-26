@@ -14,7 +14,7 @@ App Store Connect に入れる画像です。2026年11月18日に作りました
 - 「iPhone Duo」の欄（外側 1398 × 2034、内側 2007 × 2853）は、2026年11月の時点では入れなくても提出できる（iOS 27.1 SDK 以降でビルドしたものは2027年4月から必要になる、とする解説がある）。iPad・Apple Watch の欄は、iPhone だけのアプリなので要らない。
 - ヘッダと検索結果の文字は、Apple の決めた「必ず表示される範囲」に入れています。ヘッダは 1646 × 661（x 1097, y 493）、検索結果は 2168 × 1030（x 836, y 765）です（[Creative assets specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/creative-assets-specifications/)）。
 - スクリーンショットと検索結果アセットの背景は、起動画面の色に近い青のグラデーションに、駐車場の標識の「P」を薄く重ねています。
-- ヘッダアセットは、右側に起動画面の街並みとメーターのイラスト（`ios/App/App/Assets.xcassets/Splash.imageset/`）をできるだけ大きく置き、左側に駐車場の標識の「P」と見出しを置いています。イラストは左右を反転して、メーターを Apple の「必ず表示される範囲」の中（文字の側）に寄せています（反転しない版は `--flip` を付けずに作る）。ぼかしや継ぎ足しはしていません。
+- ヘッダアセットは、右側に起動画面の街並みとメーターのイラスト（`ios/App/App/Assets.xcassets/Splash.imageset/`）をできるだけ大きく置き、左側（絵より左の青い部分のまん中）に駐車場の標識の「P」と見出しを置いています。見出しの左の一部は「必ず表示される範囲」の外なので、App Store Connect のプレビューで iPhone の見え方を確かめる。イラストは左右を反転して、メーターを Apple の「必ず表示される範囲」の中（文字の側）に寄せています（反転しない版は `--flip` を付けずに作る）。ぼかしや継ぎ足しはしていません。
 - 価格・URL・ほかのサービスのロゴ・裏付けのない表現（「No.1」など）は入れません（[App Store Asset Best Practices](https://developer.apple.com/app-store/asset-best-practices/)）。
 
 並び順：01 いま使える → 02 時間も料金も → 03 目的地から → 04 すぐ案内 → 05 タイマー（プレミアム） → 06 お気に入り（プレミアム）。無料で使える機能を先に、プレミアムの機能を最後に並べています。

@@ -5,7 +5,8 @@ usage: python3 store-assets/make_header_city.py <font_dir> <out.png> [--flip]
 - 右側：起動画面（ios/App/App/Assets.xcassets/Splash.imageset/splash-2732x2732.png）の「MeterMap」の文字より下の
   街並みを、できるだけ大きく右端に寄せて置く（ぼかしや継ぎ足しはしない。左の端だけ、背景の青にすっとなじませる）。
   --flip を付けると左右を反転し、メーターを文字の側（Apple の「必ず表示される範囲」の中）に寄せる。
-- 左側：駐車場の標識の「P」と見出し。どちらも「必ず表示される範囲」（1646x661、x 1097・y 493）に入れる。
+- 左側：駐車場の標識の「P」と見出し。絵より左の青い部分のまん中に置く。高さは「必ず表示される範囲」（1646x661、x 1097・y 493）に
+  入れるが、左の一部は範囲の外になる（iPhone では左右が切れることがある）。
 - 背景はスクリーンショットと同じ青のグラデーション。
 """
 import sys
@@ -59,17 +60,20 @@ canvas.paste(pic.convert('RGBA'), (SX, 0), fade)
 # 左側：駐車場の標識の「P」と見出し（「必ず表示される範囲」の中）
 d = ImageDraw.Draw(canvas)
 P = 176
-px, py = SAFE[0] + 14, SAFE[1] + 6
+lines = [[('いま使える', font(150), YELLOW)],
+         [('路上パーキングが', font(100), WHITE)],
+         [('ひと目でわかる', font(112), WHITE)]]
+block_w = max(P, *(sum(f.getlength(t) for t, f, _ in r) for r in lines))
+# 文字と P は、絵より左の青い部分のまん中に置く（左の一部は「必ず表示される範囲」の外になる）
+LEFT = round((SX - FADE / 2 - block_w) / 2)
+px, py = LEFT, SAFE[1] + 6
 d.rounded_rectangle([px, py, px + P, py + P], round(P * 0.2), fill=WHITE)
 d.rounded_rectangle([px + 12, py + 12, px + P - 12, py + P - 12], round(P * 0.15), fill=SIGN_BLUE)
 d.text((px + P / 2, py + P / 2 + 6), 'P', font=font(round(P * 0.74)), fill=WHITE, anchor='mm')
 
-lines = [[('いま使える', font(150), YELLOW)],
-         [('路上パーキングが', font(100), WHITE)],
-         [('ひと目でわかる', font(112), WHITE)]]
 gap = 10
 heights = [round(max(f.size for _, f, _ in r) * 1.12) for r in lines]
-tx0 = SAFE[0] + 14
+tx0 = LEFT
 y = py + P + 34
 widths = []
 for runs, lh in zip(lines, heights):
@@ -89,5 +93,5 @@ out = canvas.convert('RGB')
 assert out.size == (W, H)
 out.save(OUT, 'PNG', optimize=True)
 meter_x = SX + round((1 - 0.764 if FLIP else 0.764) * sw)
-print(OUT, out.size, 'flip' if FLIP else 'normal', 'scene', (sw, sh), 'text bottom', y, 'meter x', meter_x,
+print(OUT, out.size, 'flip' if FLIP else 'normal', 'text left', LEFT, 'outside safe by', max(0, SAFE[0] - LEFT), 'scene', (sw, sh), 'text bottom', y, 'meter x', meter_x,
       'inside safe' if SAFE[0] <= meter_x <= SAFE[2] else 'OUTSIDE safe')
